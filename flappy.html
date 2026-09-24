@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>PIXEL RIOT — FLAPPY</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #080808;
+            color: white;
+            font-family: monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* CRT */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 20;
+
+            background:
+                repeating-linear-gradient(to bottom,
+                    rgba(255, 255, 255, .035) 0px,
+                    rgba(255, 255, 255, .035) 1px,
+                    transparent 1px,
+                    transparent 4px);
+        }
+
+        .game {
+            position: relative;
+            width: 400px;
+            max-width: 94vw;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow:
+                3px 0 #ff1744,
+                -3px 0 #00e5ff;
+        }
+
+        .back {
+            border: 2px solid white;
+            background: #111;
+            color: white;
+            padding: 7px 10px;
+            font-family: monospace;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .back:hover {
+            background: white;
+            color: black;
+        }
+
+        .hud {
+            position: absolute;
+            top: 48px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            z-index: 5;
+            pointer-events: none;
+            padding: 0 12px;
+        }
+
+        .scorebox {
+            background: #000;
+            border: 2px solid white;
+            padding: 7px 10px;
+            font-weight: bold;
+        }
+
+        canvas {
+            width: 400px;
+            height: 600px;
+            max-width: 100%;
+            display: block;
+
+            border: 4px solid white;
+            background: #78d7ff;
+
+            image-rendering: pixelated;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+
+            background: rgba(0, 0, 0, .68);
+
+            z-index: 10;
+            text-align: center;
+        }
+
+        .overlay.hidden {
+            display: none;
+        }
+
+        .title {
+            font-size: 42px;
+            font-weight: 900;
+
+            text-shadow:
+                4px 0 #ff1744,
+                -4px 0 #00e5ff;
+
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #ddd;
+            margin-bottom: 25px;
+        }
+
+        .start {
+            background: #ff1744;
+            color: white;
+            border: 3px solid white;
+            padding: 14px 25px;
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: 900;
+            cursor: pointer;
+
+            box-shadow: 6px 6px 0 #000;
+        }
+
+        .start:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 4px 4px 0 #000;
+        }
+
+        .gameover {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        .finalscore {
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="game">
+
+        <div class="topbar">
+            <div class="logo">PIXEL RIOT</div>
+
+            <button class="back" onclick="location.href='alone.html'">
+                ← BACK
+            </button>
+        </div>
+
+        <div class="hud">
+            <div class="scorebox">
+                SCORE: <span id="score">0</span>
+            </div>
+
+            <div class="scorebox">
+                BEST: <span id="best">0</span>
+            </div>
+        </div>
+
+        <canvas id="game" width="400" height="600"></canvas>
+
+        <!-- START -->
+        <div class="overlay" id="startScreen">
+
+            <div class="title">
+                FLAPPY
+            </div>
+
+            <div class="subtitle">
+                DON'T HIT THE PIPES.
+            </div>
+
+            <button class="start" onclick="startGame()">
+                START RIOT
+            </button>
+
+        </div>
+
+        <!-- GAME OVER -->
+        <div class="overlay hidden" id="gameOverScreen">
+
+            <div class="gameover">
+                RIOT OVER
+            </div>
+
+            <div class="finalscore">
+                SCORE: <span id="finalScore">0</span>
+            </div>
+
+            <button class="start" onclick="restartGame()">
+                TRY AGAIN
+            </button>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+
+        const scoreText = document.getElementById("score");
+        const bestText = document.getElementById("best");
+
+        const startScreen = document.getElementById("startScreen");
+        const gameOverScreen = document.getElementById("gameOverScreen");
+
+        const finalScore = document.getElementById("finalScore");
+
+        let best = Number(localStorage.getItem("pixelRiotFlappyBest") || 0);
+
+        bestText.textContent = best;
+
+        let bird;
+        let pipes;
+        let score;
+        let running;
+        let lastTime;
+        let pipeTimer;
+
+        const gravity = 0.42;
+        const flapPower = -7.2;
+
+        const pipeWidth = 62;
+        const pipeGap = 155;
+        const pipeSpeed = 2.8;
+
+
+        /* =========================
+           RESET
+        ========================= */
+
+        function reset() {
+
+            bird = {
+                x: 90,
+                y: 300,
+                velocity: 0,
+                size: 18
+            };
+
+            pipes = [];
+
+            score = 0;
+
+            running = false;
+
+            lastTime = 0;
+
+            pipeTimer = 0;
+
+            scoreText.textContent = "0";
+
+            draw();
+        }
+
+
+        /* =========================
+           START
+        ========================= */
+
+        function startGame() {
+
+            reset();
+
+            running = true;
+
+            startScreen.classList.add("hidden");
+
+            gameOverScreen.classList.add("hidden");
+
+            requestAnimationFrame(loop);
+        }
+
+
+        /* =========================
+           RESTART
+        ========================= */
+
+        function restartGame() {
+
+            startGame();
+        }
+
+
+        /* =========================
+           FLAP
+        ========================= */
+
+        function flap() {
+
+            if (!running) return;
+
+            bird.velocity = flapPower;
+        }
+
+
+        /* =========================
+           ADD PIPE
+        ========================= */
+
+        function addPipe() {
+
+            const minTop = 70;
+            const maxTop = canvas.height - pipeGap - 100;
+
+            const top = Math.floor(
+                Math.random() * (maxTop - minTop) + minTop
+            );
+
+            pipes.push({
+
+                x: canvas.width,
+
+                top: top,
+
+                bottom: top + pipeGap,
+
+                passed: false
+
+            });
+        }
+
+
+        /* =========================
+           COLLISION
+        ========================= */
+
+        function collision() {
+
+            /* Ceiling */
+            if (bird.y - bird.size <= 0) {
+                return true;
+            }
+
+            /* Ground */
+            if (bird.y + bird.size >= canvas.height) {
+                return true;
+            }
+
+            for (const pipe of pipes) {
+
+                const birdLeft = bird.x - bird.size;
+                const birdRight = bird.x + bird.size;
+
+                const birdTop = bird.y - bird.size;
+                const birdBottom = bird.y + bird.size;
+
+                const pipeLeft = pipe.x;
+                const pipeRight = pipe.x + pipeWidth;
+
+                const hitPipe =
+                    birdRight > pipeLeft &&
+                    birdLeft < pipeRight &&
+                    (
+                        birdTop < pipe.top ||
+                        birdBottom > pipe.bottom
+                    );
+
+                if (hitPipe) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+
+        /* =========================
+           UPDATE
+        ========================= */
+
+        function update(delta) {
+
+            bird.velocity += gravity;
+
+            bird.y += bird.velocity;
+
+            pipeTimer += delta;
+
+            if (pipeTimer > 1450) {
+
+                addPipe();
+
+                pipeTimer = 0;
+            }
+
+            for (const pipe of pipes) {
+
+                pipe.x -= pipeSpeed;
+
+                if (
+                    !pipe.passed &&
+                    pipe.x + pipeWidth < bird.x
+                ) {
+
+                    pipe.passed = true;
+
+                    score++;
+
+                    scoreText.textContent = score;
+                }
+            }
+
+            pipes = pipes.filter(
+                pipe => pipe.x + pipeWidth > -20
+            );
+
+            if (collision()) {
+
+                endGame();
+            }
+        }
+
+
+        /* =========================
+           END GAME
+        ========================= */
+
+        function endGame() {
+
+            running = false;
+
+            finalScore.textContent = score;
+
+            if (score > best) {
+
+                best = score;
+
+                localStorage.setItem(
+                    "pixelRiotFlappyBest",
+                    best
+                );
+
+                bestText.textContent = best;
+            }
+
+            gameOverScreen.classList.remove("hidden");
+        }
+
+
+        /* =========================
+           DRAW BACKGROUND
+        ========================= */
+
+        function drawBackground() {
+
+            /* Sky */
+
+            ctx.fillStyle = "#70d6ff";
+
+            ctx.fillRect(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+
+            /* Clouds */
+
+            ctx.fillStyle = "rgba(255,255,255,.75)";
+
+            drawCloud(70, 90);
+            drawCloud(280, 160);
+            drawCloud(170, 260);
+
+
+            /* Ground */
+
+            ctx.fillStyle = "#72b82f";
+
+            ctx.fillRect(
+                0,
+                canvas.height - 55,
+                canvas.width,
+                55
+            );
+
+            ctx.fillStyle = "#d4a94f";
+
+            ctx.fillRect(
+                0,
+                canvas.height - 20,
+                canvas.width,
+                20
+            );
+        }
+
+
+        function drawCloud(x, y) {
+
+            ctx.fillRect(x, y, 70, 18);
+
+            ctx.fillRect(x + 12, y - 10, 25, 20);
+
+            ctx.fillRect(x + 35, y - 16, 25, 25);
+
+        }
+
+
+        /* =========================
+           DRAW PIPES
+        ========================= */
+
+        function drawPipes() {
+
+            for (const pipe of pipes) {
+
+                /* TOP */
+
+                ctx.fillStyle = "#27a83b";
+
+                ctx.fillRect(
+                    pipe.x,
+                    0,
+                    pipeWidth,
+                    pipe.top
+                );
+
+                /* TOP CAP */
+
+                ctx.fillStyle = "#42c950";
+
+                ctx.fillRect(
+                    pipe.x - 6,
+                    pipe.top - 25,
+                    pipeWidth + 12,
+                    25
+                );
+
+
+                /* BOTTOM */
+
+                ctx.fillStyle = "#27a83b";
+
+                ctx.fillRect(
+                    pipe.x,
+                    pipe.bottom,
+                    pipeWidth,
+                    canvas.height - pipe.bottom
+                );
+
+                /* BOTTOM CAP */
+
+                ctx.fillStyle = "#42c950";
+
+                ctx.fillRect(
+                    pipe.x - 6,
+                    pipe.bottom,
+                    pipeWidth + 12,
+                    25
+                );
+            }
+        }
+
+
+        /* =========================
+           DRAW BIRD
+        ========================= */
+
+        function drawBird() {
+
+            ctx.save();
+
+            ctx.translate(
+                bird.x,
+                bird.y
+            );
+
+            const rotation =
+                Math.min(
+                    Math.max(
+                        bird.velocity * 0.06,
+                        -0.5
+                    ),
+                    0.8
+                );
+
+            ctx.rotate(rotation);
+
+            /* body */
+
+            ctx.fillStyle = "#ffd21f";
+
+            ctx.fillRect(
+                -18,
+                -14,
+                30,
+                28
+            );
+
+            /* wing */
+
+            ctx.fillStyle = "#f0a800";
+
+            ctx.fillRect(
+                -15,
+                0,
+                16,
+                12
+            );
+
+            /* eye */
+
+            ctx.fillStyle = "#fff";
+
+            ctx.fillRect(
+                3,
+                -10,
+                10,
+                10
+            );
+
+            ctx.fillStyle = "#000";
+
+            ctx.fillRect(
+                8,
+                -8,
+                5,
+                5
+            );
+
+            /* beak */
+
+            ctx.fillStyle = "#ff6b00";
+
+            ctx.fillRect(
+                12,
+                -1,
+                13,
+                8
+            );
+
+            ctx.restore();
+        }
+
+
+        /* =========================
+           DRAW
+        ========================= */
+
+        function draw() {
+
+            drawBackground();
+
+            drawPipes();
+
+            drawBird();
+        }
+
+
+        /* =========================
+           GAME LOOP
+        ========================= */
+
+        function loop(timestamp) {
+
+            if (!running) {
+
+                draw();
+
+                return;
+            }
+
+            if (!lastTime) {
+                lastTime = timestamp;
+            }
+
+            const delta = timestamp - lastTime;
+
+            lastTime = timestamp;
+
+            update(delta);
+
+            draw();
+
+            if (running) {
+
+                requestAnimationFrame(loop);
+            }
+        }
+
+
+        /* =========================
+           CONTROLS
+        ========================= */
+
+        document.addEventListener(
+            "keydown",
+            function (e) {
+
+                if (
+                    e.code === "Space" ||
+                    e.code === "ArrowUp" ||
+                    e.code === "KeyW"
+                ) {
+
+                    e.preventDefault();
+
+                    if (!running) {
+
+                        if (
+                            startScreen.classList.contains("hidden") &&
+                            !gameOverScreen.classList.contains("hidden")
+                        ) {
+
+                            restartGame();
+
+                        } else {
+
+                            startGame();
+
+                        }
+
+                    } else {
+
+                        flap();
+
+                    }
+                }
+            }
+        );
+
+
+        /* Mouse */
+
+        canvas.addEventListener(
+            "mousedown",
+            function () {
+
+                if (running) {
+
+                    flap();
+
+                }
+            }
+        );
+
+
+        /* Mobile */
+
+        canvas.addEventListener(
+            "touchstart",
+            function (e) {
+
+                e.preventDefault();
+
+                if (running) {
+
+                    flap();
+
+                }
+            },
+            { passive: false }
+        );
+
+
+        /* Initial */
+
+        reset();
+
+    </script>
+
+</body>
+
+</html>

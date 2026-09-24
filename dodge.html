@@ -1,0 +1,901 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIXEL RIOT — DODGE</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at center, #171717 0%, #080808 55%, #000 100%);
+            color: #fff;
+            font-family: monospace;
+            overflow: hidden;
+        }
+
+        /* CRT */
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: repeating-linear-gradient(to bottom,
+                    rgba(255, 255, 255, .035) 0px,
+                    rgba(255, 255, 255, .035) 1px,
+                    transparent 1px,
+                    transparent 4px);
+            z-index: 20;
+        }
+
+        .wrap {
+            width: min(760px, 94vw);
+            margin: auto;
+            padding: 18px 0;
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .back {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 900;
+            font-size: 13px;
+            border: 2px solid #fff;
+            padding: 7px 10px;
+            box-shadow: 4px 4px 0 #000;
+        }
+
+        .back:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .brand {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-shadow: 3px 0 #ff1744, -3px 0 #00e5ff;
+        }
+
+        .gamebox {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin: auto;
+            border: 4px solid #fff;
+            background: #050505;
+            box-shadow: 8px 8px 0 #000;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+            background: #090909;
+        }
+
+        .hud {
+            position: absolute;
+            top: 12px;
+            left: 14px;
+            right: 14px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            font-size: 14px;
+            font-weight: 900;
+            text-shadow: 2px 2px #000;
+        }
+
+        .hud span {
+            border: 2px solid #fff;
+            background: #000;
+            padding: 6px 10px;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            background: rgba(0, 0, 0, .78);
+            text-align: center;
+        }
+
+        .overlay.hidden {
+            display: none;
+        }
+
+        .title {
+            font-size: clamp(38px, 8vw, 70px);
+            font-weight: 900;
+            letter-spacing: 5px;
+            text-shadow: 5px 0 #ff1744, -5px 0 #00e5ff;
+            margin-bottom: 12px;
+        }
+
+        .sub {
+            font-size: 13px;
+            line-height: 1.7;
+            margin-bottom: 22px;
+            color: #ddd;
+        }
+
+        .btn {
+            border: 3px solid #fff;
+            background: #fff;
+            color: #000;
+            padding: 12px 22px;
+            font-family: monospace;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 5px 5px 0 #ff1744;
+        }
+
+        .btn:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 3px 3px 0 #ff1744;
+        }
+
+        .tip {
+            text-align: center;
+            margin-top: 13px;
+            font-size: 11px;
+            color: #999;
+        }
+
+        .mobile-controls {
+            display: none;
+            margin: 14px auto 0;
+            width: 180px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 7px;
+        }
+
+        .mobile-controls button {
+            height: 48px;
+            border: 2px solid #fff;
+            background: #111;
+            color: #fff;
+            font: bold 18px monospace;
+            touch-action: none;
+        }
+
+        .mobile-controls button:active {
+            background: #fff;
+            color: #000;
+        }
+
+        .mobile-controls .empty {
+            visibility: hidden;
+        }
+
+        @media(max-width:700px) {
+            .wrap {
+                padding-top: 10px;
+            }
+
+            .brand {
+                font-size: 17px;
+            }
+
+            .mobile-controls {
+                display: grid;
+            }
+
+            .tip {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="wrap">
+
+        <div class="top">
+            <a class="back" href="alone.html">← BACK</a>
+            <div class="brand">PIXEL RIOT</div>
+        </div>
+
+        <div class="gamebox">
+
+            <canvas id="game" width="700" height="600"></canvas>
+
+            <div class="hud">
+                <span>SCORE <b id="score">0</b></span>
+                <span>BEST <b id="best">0</b></span>
+            </div>
+
+            <div class="overlay" id="start">
+                <div class="title">DODGE</div>
+
+                <div class="sub">
+                    SURVIVE THE RIOT.<br>
+                    MOVE. DODGE. DON'T GET HIT.
+                </div>
+
+                <button class="btn" id="play">
+                    START RIOT
+                </button>
+            </div>
+
+            <div class="overlay hidden" id="over">
+                <div class="title">WIPED OUT</div>
+
+                <div class="sub">
+                    SCORE: <b id="final">0</b>
+                </div>
+
+                <button class="btn" id="again">
+                    RETRY
+                </button>
+            </div>
+
+        </div>
+
+        <div class="tip">
+            WASD / ARROWS = MOVE · SURVIVE AS LONG AS YOU CAN
+        </div>
+
+        <div class="mobile-controls">
+            <button class="empty">.</button>
+            <button data-key="up">▲</button>
+            <button class="empty">.</button>
+
+            <button data-key="left">◀</button>
+            <button data-key="down">▼</button>
+            <button data-key="right">▶</button>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+
+        const scoreEl = document.getElementById("score");
+        const bestEl = document.getElementById("best");
+        const finalEl = document.getElementById("final");
+
+        const startScreen = document.getElementById("start");
+        const gameOverScreen = document.getElementById("over");
+
+        const playBtn = document.getElementById("play");
+        const againBtn = document.getElementById("again");
+
+        const W = canvas.width;
+        const H = canvas.height;
+
+        let player;
+        let enemies;
+        let particles;
+
+        let score = 0;
+        let best = Number(localStorage.getItem("pixelRiotDodgeBest") || 0);
+
+        let running = false;
+        let gameOver = false;
+
+        let spawnTimer = 0;
+        let difficulty = 1;
+        let lastTime = 0;
+
+        let keys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
+
+        bestEl.textContent = best;
+
+
+        /* =========================
+           PLAYER
+        ========================= */
+
+        function createPlayer() {
+
+            return {
+                x: W / 2 - 15,
+                y: H / 2 - 15,
+                size: 30,
+                speed: 310
+            };
+
+        }
+
+
+        /* =========================
+           START
+        ========================= */
+
+        function startGame() {
+
+            player = createPlayer();
+
+            enemies = [];
+            particles = [];
+
+            score = 0;
+            difficulty = 1;
+            spawnTimer = 0;
+
+            running = true;
+            gameOver = false;
+
+            scoreEl.textContent = "0";
+
+            startScreen.classList.add("hidden");
+            gameOverScreen.classList.add("hidden");
+
+            lastTime = performance.now();
+
+            requestAnimationFrame(loop);
+        }
+
+
+        /* =========================
+           ENEMIES
+        ========================= */
+
+        function spawnEnemy() {
+
+            const size = 18 + Math.random() * 25;
+
+            let side = Math.floor(Math.random() * 4);
+
+            let x;
+            let y;
+
+            if (side === 0) {
+                x = Math.random() * W;
+                y = -size;
+            }
+
+            if (side === 1) {
+                x = W + size;
+                y = Math.random() * H;
+            }
+
+            if (side === 2) {
+                x = Math.random() * W;
+                y = H + size;
+            }
+
+            if (side === 3) {
+                x = -size;
+                y = Math.random() * H;
+            }
+
+            const angle = Math.atan2(
+                player.y + player.size / 2 - y,
+                player.x + player.size / 2 - x
+            );
+
+            const speed =
+                (90 + Math.random() * 80) *
+                difficulty;
+
+            enemies.push({
+                x,
+                y,
+                size,
+                speed,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                rotation: Math.random() * Math.PI
+            });
+        }
+
+
+        /* =========================
+           PARTICLES
+        ========================= */
+
+        function burst(x, y) {
+
+            for (let i = 0; i < 16; i++) {
+
+                const angle =
+                    Math.random() * Math.PI * 2;
+
+                const speed =
+                    60 + Math.random() * 180;
+
+                particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: .5 + Math.random() * .5
+                });
+
+            }
+        }
+
+
+        /* =========================
+           INPUT
+        ========================= */
+
+        window.addEventListener("keydown", e => {
+
+            if (e.key === "ArrowUp" || e.key.toLowerCase() === "w") {
+                keys.up = true;
+            }
+
+            if (e.key === "ArrowDown" || e.key.toLowerCase() === "s") {
+                keys.down = true;
+            }
+
+            if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") {
+                keys.left = true;
+            }
+
+            if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") {
+                keys.right = true;
+            }
+
+            if (e.code === "Space" && gameOver) {
+                startGame();
+            }
+
+        });
+
+        window.addEventListener("keyup", e => {
+
+            if (e.key === "ArrowUp" || e.key.toLowerCase() === "w") {
+                keys.up = false;
+            }
+
+            if (e.key === "ArrowDown" || e.key.toLowerCase() === "s") {
+                keys.down = false;
+            }
+
+            if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") {
+                keys.left = false;
+            }
+
+            if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") {
+                keys.right = false;
+            }
+
+        });
+
+
+        /* MOBILE */
+
+        document.querySelectorAll(".mobile-controls button[data-key]")
+            .forEach(button => {
+
+                const key = button.dataset.key;
+
+                button.addEventListener("pointerdown", e => {
+                    e.preventDefault();
+                    keys[key] = true;
+                });
+
+                button.addEventListener("pointerup", e => {
+                    e.preventDefault();
+                    keys[key] = false;
+                });
+
+                button.addEventListener("pointerleave", () => {
+                    keys[key] = false;
+                });
+
+            });
+
+
+        /* =========================
+           UPDATE
+        ========================= */
+
+        function update(dt) {
+
+            if (!running) return;
+
+            /* PLAYER MOVEMENT */
+
+            let dx = 0;
+            let dy = 0;
+
+            if (keys.left) dx--;
+            if (keys.right) dx++;
+            if (keys.up) dy--;
+            if (keys.down) dy++;
+
+            if (dx !== 0 || dy !== 0) {
+
+                const length =
+                    Math.hypot(dx, dy);
+
+                dx /= length;
+                dy /= length;
+
+                player.x += dx * player.speed * dt;
+                player.y += dy * player.speed * dt;
+            }
+
+
+            /* KEEP PLAYER INSIDE */
+
+            player.x =
+                Math.max(0,
+                    Math.min(W - player.size, player.x));
+
+            player.y =
+                Math.max(0,
+                    Math.min(H - player.size, player.y));
+
+
+            /* SPAWN */
+
+            spawnTimer -= dt;
+
+            const spawnRate =
+                Math.max(.16, .75 - difficulty * .035);
+
+            if (spawnTimer <= 0) {
+
+                spawnEnemy();
+
+                spawnTimer = spawnRate;
+            }
+
+
+            /* DIFFICULTY */
+
+            difficulty += dt * .025;
+
+            score += dt * 10;
+
+            scoreEl.textContent =
+                Math.floor(score);
+
+
+            /* ENEMIES */
+
+            for (const enemy of enemies) {
+
+                enemy.x += enemy.vx * dt;
+                enemy.y += enemy.vy * dt;
+
+                enemy.rotation += dt * 4;
+
+
+                /* Slight tracking */
+
+                const targetX =
+                    player.x + player.size / 2;
+
+                const targetY =
+                    player.y + player.size / 2;
+
+                const angle =
+                    Math.atan2(
+                        targetY - enemy.y,
+                        targetX - enemy.x
+                    );
+
+                const turn =
+                    Math.min(1, dt * .7);
+
+                enemy.vx +=
+                    (Math.cos(angle) * enemy.speed - enemy.vx)
+                    * turn;
+
+                enemy.vy +=
+                    (Math.sin(angle) * enemy.speed - enemy.vy)
+                    * turn;
+
+
+                /* COLLISION */
+
+                if (rectCircleCollision(player, enemy)) {
+
+                    burst(
+                        player.x + player.size / 2,
+                        player.y + player.size / 2
+                    );
+
+                    endGame();
+                    return;
+                }
+
+            }
+
+
+            /* REMOVE FAR ENEMIES */
+
+            enemies =
+                enemies.filter(enemy =>
+                    enemy.x > -120 &&
+                    enemy.x < W + 120 &&
+                    enemy.y > -120 &&
+                    enemy.y < H + 120
+                );
+
+
+            /* PARTICLES */
+
+            for (const p of particles) {
+
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+
+                p.life -= dt;
+            }
+
+            particles =
+                particles.filter(p => p.life > 0);
+        }
+
+
+        /* =========================
+           COLLISION
+        ========================= */
+
+        function rectCircleCollision(rect, circle) {
+
+            const closestX =
+                Math.max(
+                    rect.x,
+                    Math.min(circle.x, rect.x + rect.size)
+                );
+
+            const closestY =
+                Math.max(
+                    rect.y,
+                    Math.min(circle.y, rect.y + rect.size)
+                );
+
+            const dx =
+                circle.x - closestX;
+
+            const dy =
+                circle.y - closestY;
+
+            return dx * dx + dy * dy <
+                circle.size * circle.size / 4;
+        }
+
+
+        /* =========================
+           DRAW
+        ========================= */
+
+        function draw() {
+
+            ctx.clearRect(0, 0, W, H);
+
+            /* GRID */
+
+            ctx.strokeStyle =
+                "rgba(255,255,255,.045)";
+
+            ctx.lineWidth = 1;
+
+            for (let x = 0; x < W; x += 35) {
+
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, H);
+                ctx.stroke();
+
+            }
+
+            for (let y = 0; y < H; y += 35) {
+
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+
+            }
+
+
+            /* ENEMIES */
+
+            for (const enemy of enemies) {
+
+                ctx.save();
+
+                ctx.translate(
+                    enemy.x,
+                    enemy.y
+                );
+
+                ctx.rotate(enemy.rotation);
+
+                ctx.fillStyle = "#ff1744";
+
+                ctx.fillRect(
+                    -enemy.size / 2,
+                    -enemy.size / 2,
+                    enemy.size,
+                    enemy.size
+                );
+
+                ctx.strokeStyle = "#fff";
+
+                ctx.lineWidth = 2;
+
+                ctx.strokeRect(
+                    -enemy.size / 2,
+                    -enemy.size / 2,
+                    enemy.size,
+                    enemy.size
+                );
+
+                ctx.restore();
+            }
+
+
+            /* PLAYER */
+
+            if (player) {
+
+                ctx.fillStyle = "#00e5ff";
+
+                ctx.fillRect(
+                    player.x,
+                    player.y,
+                    player.size,
+                    player.size
+                );
+
+                ctx.strokeStyle = "#fff";
+
+                ctx.lineWidth = 3;
+
+                ctx.strokeRect(
+                    player.x,
+                    player.y,
+                    player.size,
+                    player.size
+                );
+
+                /* CORE */
+
+                ctx.fillStyle = "#fff";
+
+                ctx.fillRect(
+                    player.x + 9,
+                    player.y + 9,
+                    12,
+                    12
+                );
+            }
+
+
+            /* PARTICLES */
+
+            for (const p of particles) {
+
+                ctx.globalAlpha =
+                    Math.max(0, p.life);
+
+                ctx.fillStyle = "#fff";
+
+                ctx.fillRect(
+                    p.x,
+                    p.y,
+                    4,
+                    4
+                );
+
+            }
+
+            ctx.globalAlpha = 1;
+        }
+
+
+        /* =========================
+           GAME OVER
+        ========================= */
+
+        function endGame() {
+
+            running = false;
+            gameOver = true;
+
+            const finalScore =
+                Math.floor(score);
+
+            finalEl.textContent =
+                finalScore;
+
+            if (finalScore > best) {
+
+                best = finalScore;
+
+                localStorage.setItem(
+                    "pixelRiotDodgeBest",
+                    best
+                );
+
+                bestEl.textContent = best;
+            }
+
+            gameOverScreen.classList.remove("hidden");
+
+            draw();
+        }
+
+
+        /* =========================
+           LOOP
+        ========================= */
+
+        function loop(time) {
+
+            if (!running) return;
+
+            const dt =
+                Math.min(
+                    (time - lastTime) / 1000,
+                    .035
+                );
+
+            lastTime = time;
+
+            update(dt);
+            draw();
+
+            if (running) {
+                requestAnimationFrame(loop);
+            }
+        }
+
+
+        /* =========================
+           BUTTONS
+        ========================= */
+
+        playBtn.addEventListener(
+            "click",
+            startGame
+        );
+
+        againBtn.addEventListener(
+            "click",
+            startGame
+        );
+
+
+        /* INITIAL SCREEN */
+
+        player = createPlayer();
+        enemies = [];
+        particles = [];
+
+        draw();
+
+    </script>
+
+</body>
+
+</html>
+```

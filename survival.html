@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>PIXEL RIOT // SURVIVAL</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            image-rendering: pixelated;
+        }
+
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #050608;
+            color: #fff;
+            font-family: "Courier New", monospace;
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 999;
+            background: repeating-linear-gradient(to bottom,
+                    rgba(255, 255, 255, .025) 0px,
+                    rgba(255, 255, 255, .025) 1px,
+                    transparent 1px,
+                    transparent 4px);
+        }
+
+        /* =========================
+   TOP BAR
+========================= */
+
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 62px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 22px;
+            background: #090b0f;
+            border-bottom: 3px solid #fff;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: #fff;
+            text-shadow:
+                3px 0 #ff1744,
+                -3px 0 #00e5ff;
+        }
+
+        .status {
+            color: #777;
+            font-size: 11px;
+            letter-spacing: 3px;
+        }
+
+        .back {
+            color: #fff;
+            text-decoration: none;
+            border: 2px solid #444;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .back:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        /* =========================
+   WORLD
+========================= */
+
+        .game {
+            position: absolute;
+            top: 62px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 50%, #182018 0, #0b100d 45%, #050608 100%);
+        }
+
+        .world {
+            position: absolute;
+            width: 1600px;
+            height: 1000px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .ground {
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(rgba(255, 255, 255, .025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, .025) 1px, transparent 1px),
+                #182018;
+            background-size: 40px 40px;
+        }
+
+        /* =========================
+   DECOR
+========================= */
+
+        .decor {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .water {
+            background: #102733;
+            border: 5px solid #07151c;
+        }
+
+        .path {
+            background: #29251d;
+            border: 4px solid #17140f;
+        }
+
+        .house {
+            background: #282828;
+            border: 6px solid #080808;
+            box-shadow: 8px 8px 0 #080808;
+        }
+
+        .house::before {
+            content: "";
+            position: absolute;
+            left: 15%;
+            top: -35px;
+            width: 70%;
+            height: 35px;
+            background: #7d2525;
+            border: 5px solid #080808;
+        }
+
+        /* =========================
+   RESOURCES
+========================= */
+
+        .resource {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: transform .12s;
+        }
+
+        .resource:hover {
+            transform: scale(1.1);
+        }
+
+        .resource .emoji {
+            font-size: 42px;
+            filter: drop-shadow(4px 4px 0 #000);
+        }
+
+        .resource-label {
+            position: absolute;
+            top: 65px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 8px;
+            font-weight: bold;
+            color: #aaa;
+            opacity: .75;
+        }
+
+        /* =========================
+   PLAYER
+========================= */
+
+        .player {
+            position: absolute;
+            width: 42px;
+            height: 42px;
+            background: #00e5ff;
+            border: 4px solid #fff;
+            box-shadow:
+                5px 5px 0 #000,
+                inset 0 0 0 4px #075d6b;
+            z-index: 30;
+        }
+
+        .player::after {
+            content: "";
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #000;
+            right: 5px;
+            top: 6px;
+        }
+
+        /* =========================
+   HUD
+========================= */
+
+        .hud {
+            position: fixed;
+            left: 18px;
+            top: 80px;
+            z-index: 80;
+            background: #080a0d;
+            border: 3px solid #fff;
+            box-shadow: 6px 6px 0 #000;
+            min-width: 230px;
+            padding: 13px;
+        }
+
+        .hud-title {
+            color: #777;
+            font-size: 9px;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+            font-size: 11px;
+        }
+
+        .bar {
+            height: 8px;
+            margin-top: 3px;
+            background: #222;
+            border: 1px solid #555;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 100%;
+            background: #00e5ff;
+        }
+
+        /* =========================
+   INVENTORY
+========================= */
+
+        .inventory {
+            position: fixed;
+            right: 18px;
+            top: 80px;
+            width: 250px;
+            z-index: 80;
+            background: #080a0d;
+            border: 3px solid #fff;
+            box-shadow: 6px 6px 0 #000;
+            padding: 14px;
+        }
+
+        .panel-title {
+            font-size: 10px;
+            letter-spacing: 3px;
+            color: #aaa;
+            margin-bottom: 12px;
+        }
+
+        .resources {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px;
+        }
+
+        .item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px;
+            background: #11151a;
+            border: 2px solid #292f35;
+            font-size: 11px;
+        }
+
+        .item b {
+            color: #00e5ff;
+        }
+
+        /* =========================
+   CRAFTING
+========================= */
+
+        .crafting {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            width: 250px;
+            z-index: 80;
+            background: #080a0d;
+            border: 3px solid #fff;
+            box-shadow: 6px 6px 0 #000;
+            padding: 14px;
+        }
+
+        .recipe {
+            width: 100%;
+            margin-top: 8px;
+            padding: 10px;
+            background: #15191d;
+            border: 2px solid #343b42;
+            color: #fff;
+            text-align: left;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .recipe:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .recipe:disabled {
+            opacity: .3;
+            cursor: not-allowed;
+        }
+
+        .recipe-name {
+            display: block;
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .recipe-cost {
+            display: block;
+            margin-top: 4px;
+            color: #888;
+            font-size: 9px;
+        }
+
+        /* =========================
+   ACTION PROMPT
+========================= */
+
+        .prompt {
+            position: fixed;
+            left: 50%;
+            bottom: 22px;
+            transform: translateX(-50%);
+            z-index: 90;
+            padding: 11px 18px;
+            background: #080a0d;
+            border: 3px solid #fff;
+            box-shadow: 5px 5px 0 #000;
+            font-size: 11px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .prompt.show {
+            display: block;
+        }
+
+        /* =========================
+   TOAST
+========================= */
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            top: 82px;
+            transform: translateX(-50%) translateY(-20px);
+            z-index: 200;
+            padding: 12px 18px;
+            background: #fff;
+            color: #000;
+            border: 3px solid #000;
+            box-shadow: 6px 6px 0 #000;
+            font-size: 11px;
+            font-weight: 900;
+            opacity: 0;
+            pointer-events: none;
+            transition: .2s;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* =========================
+   MOBILE
+========================= */
+
+        @media(max-width:800px) {
+
+            .status {
+                display: none;
+            }
+
+            .hud {
+                left: 8px;
+                top: 72px;
+                min-width: 190px;
+                transform: scale(.82);
+                transform-origin: top left;
+            }
+
+            .inventory {
+                right: 8px;
+                top: 72px;
+                width: 185px;
+                transform: scale(.82);
+                transform-origin: top right;
+            }
+
+            .crafting {
+                right: 8px;
+                bottom: 8px;
+                width: 185px;
+                transform: scale(.82);
+                transform-origin: bottom right;
+            }
+
+            .logo {
+                font-size: 18px;
+            }
+
+            .back {
+                font-size: 9px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =========================
+     TOP BAR
+========================= -->
+
+    <div class="topbar">
+        <div class="logo">PIXEL RIOT</div>
+
+        <div class="status">
+            SURVIVAL // V3
+        </div>
+
+        <a class="back" href="alone.html">
+            ← BACK
+        </a>
+    </div>
+
+
+    <!-- =========================
+     HUD
+========================= -->
+
+    <div class="hud">
+
+        <div class="hud-title">
+            SURVIVOR STATUS
+        </div>
+
+        <div class="stat">
+            <span>HEALTH</span>
+            <b id="healthText">100</b>
+        </div>
+
+        <div class="bar">
+            <div class="bar-fill" id="healthBar"></div>
+        </div>
+
+        <div class="stat">
+            <span>ENERGY</span>
+            <b id="energyText">100</b>
+        </div>
+
+        <div class="bar">
+            <div class="bar-fill" id="energyBar"></div>
+        </div>
+
+        <div class="stat">
+            <span>TOOLS</span>
+            <b id="toolText">HANDS</b>
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+     INVENTORY
+========================= -->
+
+    <div class="inventory">
+
+        <div class="panel-title">
+            🎒 INVENTORY
+        </div>
+
+        <div class="resources">
+
+            <div class="item">
+                <span>🪵 WOOD</span>
+                <b id="wood">0</b>
+            </div>
+
+            <div class="item">
+                <span>🪨 STONE</span>
+                <b id="stone">0</b>
+            </div>
+
+            <div class="item">
+                <span>🌿 FIBER</span>
+                <b id="fiber">0</b>
+            </div>
+
+            <div class="item">
+                <span>🔥 CAMP</span>
+                <b id="campfire">0</b>
+            </div>
+
+            <div class="item">
+                <span>🪓 AXE</span>
+                <b id="axe">0</b>
+            </div>
+
+            <div class="item">
+                <span>⛏️ PICK</span>
+                <b id="pickaxe">0</b>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- =========================
+     CRAFTING
+========================= -->
+
+    <div class="crafting">
+
+        <div class="panel-title">
+            🛠️ CRAFTING
+        </div>
+
+        <button class="recipe" id="axeRecipe" onclick="craft('axe')">
+            <span class="recipe-name">🪓 STONE AXE</span>
+            <span class="recipe-cost">5 WOOD + 3 STONE + 2 FIBER</span>
+        </button>
+
+        <button class="recipe" id="pickRecipe" onclick="craft('pickaxe')">
+            <span class="recipe-name">⛏️ STONE PICKAXE</span>
+            <span class="recipe-cost">3 WOOD + 5 STONE + 2 FIBER</span>
+        </button>
+
+        <button class="recipe" id="campRecipe" onclick="craft('campfire')">
+            <span class="recipe-name">🔥 CAMPFIRE</span>
+            <span class="recipe-cost">8 WOOD + 6 STONE</span>
+        </button>
+
+    </div>
+
+
+    <!-- =========================
+     PROMPT
+========================= -->
+
+    <div class="prompt" id="prompt">
+        E — GATHER
+    </div>
+
+
+    <div class="toast" id="toast">
+        COLLECTED
+    </div>
+
+
+    <!-- =========================
+     WORLD
+========================= -->
+
+    <div class="game" id="game">
+
+        <div class="world" id="world">
+
+            <div class="ground"></div>
+
+            <!-- WATER -->
+
+            <div class="decor water" style="left:80px;top:80px;width:300px;height:190px;"></div>
+
+            <div class="decor water" style="left:1180px;top:650px;width:300px;height:210px;"></div>
+
+            <!-- PATHS -->
+
+            <div class="decor path" style="left:400px;top:440px;width:800px;height:80px;"></div>
+
+            <div class="decor path" style="left:760px;top:180px;width:80px;height:700px;"></div>
+
+            <!-- HOUSE -->
+
+            <div class="decor house" style="left:680px;top:380px;width:240px;height:150px;"></div>
+
+
+            <!-- RESOURCES -->
+
+            <div class="resource" data-type="wood" style="left:470px;top:180px;">
+                <span class="emoji">🌲</span>
+                <span class="resource-label">TREE</span>
+            </div>
+
+            <div class="resource" data-type="wood" style="left:560px;top:250px;">
+                <span class="emoji">🌲</span>
+                <span class="resource-label">TREE</span>
+            </div>
+
+            <div class="resource" data-type="wood" style="left:1050px;top:220px;">
+                <span class="emoji">🌲</span>
+                <span class="resource-label">TREE</span>
+            </div>
+
+            <div class="resource" data-type="wood" style="left:1220px;top:350px;">
+                <span class="emoji">🌲</span>
+                <span class="resource-label">TREE</span>
+            </div>
+
+
+            <div class="resource" data-type="stone" style="left:400px;top:650px;">
+                <span class="emoji">🪨</span>
+                <span class="resource-label">ROCK</span>
+            </div>
+
+            <div class="resource" data-type="stone" style="left:520px;top:760px;">
+                <span class="emoji">🪨</span>
+                <span class="resource-label">ROCK</span>
+            </div>
+
+            <div class="resource" data-type="stone" style="left:1040px;top:700px;">
+                <span class="emoji">🪨</span>
+                <span class="resource-label">ROCK</span>
+            </div>
+
+            <div class="resource" data-type="stone" style="left:1270px;top:520px;">
+                <span class="emoji">🪨</span>
+                <span class="resource-label">ROCK</span>
+            </div>
+
+
+            <div class="resource" data-type="fiber" style="left:350px;top:350px;">
+                <span class="emoji">🌿</span>
+                <span class="resource-label">BUSH</span>
+            </div>
+
+            <div class="resource" data-type="fiber" style="left:1140px;top:580px;">
+                <span class="emoji">🌿</span>
+                <span class="resource-label">BUSH</span>
+            </div>
+
+            <div class="resource" data-type="fiber" style="left:900px;top:760px;">
+                <span class="emoji">🌿</span>
+                <span class="resource-label">BUSH</span>
+            </div>
+
+
+            <!-- PLAYER -->
+
+            <div class="player" id="player"></div>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+        /* =========================================
+           PLAYER
+        ========================================= */
+
+        const player = document.getElementById("player");
+        const world = document.getElementById("world");
+
+        let px = 780;
+        let py = 480;
+
+        const speed = 5;
+
+        const keys = {};
+
+        document.addEventListener("keydown", e => {
+
+            keys[e.key.toLowerCase()] = true;
+
+            if (
+                ["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(
+                    e.key.toLowerCase()
+                )
+            ) {
+                e.preventDefault();
+            }
+
+        });
+
+        document.addEventListener("keyup", e => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+
+        function updatePlayer() {
+
+            let dx = 0;
+            let dy = 0;
+
+            if (keys["w"] || keys["arrowup"]) dy -= speed;
+            if (keys["s"] || keys["arrowdown"]) dy += speed;
+            if (keys["a"] || keys["arrowleft"]) dx -= speed;
+            if (keys["d"] || keys["arrowright"]) dx += speed;
+
+            px += dx;
+            py += dy;
+
+            px = Math.max(20, Math.min(1538, px));
+            py = Math.max(20, Math.min(938, py));
+
+            player.style.left = px + "px";
+            player.style.top = py + "px";
+
+            updatePrompt();
+        }
+
+
+        /* =========================================
+           INVENTORY
+        ========================================= */
+
+        const inventory = {
+            wood: 0,
+            stone: 0,
+            fiber: 0,
+            axe: 0,
+            pickaxe: 0,
+            campfire: 0
+        };
+
+
+        /* =========================================
+           RESOURCE SYSTEM
+        ========================================= */
+
+        const resources = [...document.querySelectorAll(".resource")];
+
+        let nearbyResource = null;
+
+        function distance(a, b) {
+
+            const ax = a.offsetLeft + 32;
+            const ay = a.offsetTop + 32;
+
+            const bx = b.offsetLeft + 21;
+            const by = b.offsetTop + 21;
+
+            return Math.hypot(ax - bx, ay - by);
+        }
+
+
+        function updatePrompt() {
+
+            nearbyResource = null;
+
+            let closest = Infinity;
+
+            resources.forEach(resource => {
+
+                if (resource.dataset.gone === "true") return;
+
+                const d = distance(resource, player);
+
+                if (d < 90 && d < closest) {
+
+                    closest = d;
+                    nearbyResource = resource;
+
+                }
+
+            });
+
+            const prompt = document.getElementById("prompt");
+
+            if (nearbyResource) {
+
+                const type = nearbyResource.dataset.type.toUpperCase();
+
+                prompt.textContent = "E — GATHER " + type;
+                prompt.classList.add("show");
+
+            } else {
+
+                prompt.classList.remove("show");
+
+            }
+        }
+
+
+        /* =========================================
+           GATHER
+        ========================================= */
+
+        document.addEventListener("keydown", e => {
+
+            if (e.key.toLowerCase() !== "e") return;
+
+            gather();
+
+        });
+
+
+        function gather() {
+
+            if (!nearbyResource) return;
+
+            const resource = nearbyResource;
+            const type = resource.dataset.type;
+
+            let amount = 1;
+
+            /* tools improve gathering */
+
+            if (type === "wood" && inventory.axe) {
+                amount = 3;
+            }
+
+            if (type === "stone" && inventory.pickaxe) {
+                amount = 3;
+            }
+
+            inventory[type] += amount;
+
+            resource.dataset.gone = "true";
+            resource.style.visibility = "hidden";
+
+            showToast(
+                "+" + amount + " " + type.toUpperCase()
+            );
+
+            updateInventory();
+
+            /* respawn */
+
+            setTimeout(() => {
+
+                resource.dataset.gone = "false";
+                resource.style.visibility = "visible";
+
+            }, 8000);
+
+        }
+
+
+        /* =========================================
+           CRAFTING
+        ========================================= */
+
+        function craft(item) {
+
+            if (item === "axe") {
+
+                if (
+                    inventory.wood < 5 ||
+                    inventory.stone < 3 ||
+                    inventory.fiber < 2
+                ) {
+
+                    showToast("NOT ENOUGH MATERIALS");
+                    return;
+
+                }
+
+                inventory.wood -= 5;
+                inventory.stone -= 3;
+                inventory.fiber -= 2;
+
+                inventory.axe++;
+
+                showToast("🪓 STONE AXE CRAFTED");
+            }
+
+
+            if (item === "pickaxe") {
+
+                if (
+                    inventory.wood < 3 ||
+                    inventory.stone < 5 ||
+                    inventory.fiber < 2
+                ) {
+
+                    showToast("NOT ENOUGH MATERIALS");
+                    return;
+
+                }
+
+                inventory.wood -= 3;
+                inventory.stone -= 5;
+                inventory.fiber -= 2;
+
+                inventory.pickaxe++;
+
+                showToast("⛏️ STONE PICKAXE CRAFTED");
+            }
+
+
+            if (item === "campfire") {
+
+                if (
+                    inventory.wood < 8 ||
+                    inventory.stone < 6
+                ) {
+
+                    showToast("NOT ENOUGH MATERIALS");
+                    return;
+
+                }
+
+                inventory.wood -= 8;
+                inventory.stone -= 6;
+
+                inventory.campfire++;
+
+                showToast("🔥 CAMPFIRE CRAFTED");
+            }
+
+            updateInventory();
+        }
+
+
+        /* =========================================
+           INVENTORY UI
+        ========================================= */
+
+        function updateInventory() {
+
+            document.getElementById("wood").textContent =
+                inventory.wood;
+
+            document.getElementById("stone").textContent =
+                inventory.stone;
+
+            document.getElementById("fiber").textContent =
+                inventory.fiber;
+
+            document.getElementById("axe").textContent =
+                inventory.axe;
+
+            document.getElementById("pickaxe").textContent =
+                inventory.pickaxe;
+
+            document.getElementById("campfire").textContent =
+                inventory.campfire;
+
+            document.getElementById("toolText").textContent =
+                inventory.axe || inventory.pickaxe
+                    ? "TOOLS"
+                    : "HANDS";
+
+            updateRecipes();
+        }
+
+
+        function updateRecipes() {
+
+            document.getElementById("axeRecipe").disabled =
+                inventory.wood < 5 ||
+                inventory.stone < 3 ||
+                inventory.fiber < 2;
+
+            document.getElementById("pickRecipe").disabled =
+                inventory.wood < 3 ||
+                inventory.stone < 5 ||
+                inventory.fiber < 2;
+
+            document.getElementById("campRecipe").disabled =
+                inventory.wood < 8 ||
+                inventory.stone < 6;
+        }
+
+
+        /* =========================================
+           TOAST
+        ========================================= */
+
+        let toastTimer;
+
+        function showToast(message) {
+
+            const toast = document.getElementById("toast");
+
+            toast.textContent = message;
+            toast.classList.add("show");
+
+            clearTimeout(toastTimer);
+
+            toastTimer = setTimeout(() => {
+
+                toast.classList.remove("show");
+
+            }, 1200);
+
+        }
+
+
+        /* =========================================
+           CAMERA
+        ========================================= */
+
+        function camera() {
+
+            const game = document.getElementById("game");
+
+            const rect = game.getBoundingClientRect();
+
+            let camX =
+                rect.width / 2 -
+                px;
+
+            let camY =
+                rect.height / 2 -
+                py;
+
+            const minX =
+                rect.width - 1600;
+
+            const minY =
+                rect.height - 1000;
+
+            camX = Math.min(0, Math.max(minX, camX));
+            camY = Math.min(0, Math.max(minY, camY));
+
+            world.style.transform =
+                `translate(${camX}px,${camY}px)`;
+
+        }
+
+
+        /* =========================================
+           GAME LOOP
+        ========================================= */
+
+        function loop() {
+
+            updatePlayer();
+            camera();
+
+            requestAnimationFrame(loop);
+
+        }
+
+        updateInventory();
+
+        loop();
+
+    </script>
+
+</body>
+
+</html>

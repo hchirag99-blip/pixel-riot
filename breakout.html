@@ -1,0 +1,1112 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>PIXEL RIOT — BREAKOUT</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at center, #181818 0%, #080808 55%, #000 100%);
+            color: #fff;
+            font-family: monospace;
+            overflow: hidden;
+        }
+
+        /* CRT scanlines */
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 20;
+            background: repeating-linear-gradient(to bottom,
+                    rgba(255, 255, 255, .035) 0px,
+                    rgba(255, 255, 255, .035) 1px,
+                    transparent 1px,
+                    transparent 4px);
+        }
+
+        .wrap {
+            width: min(760px, 94vw);
+            margin: auto;
+            padding: 18px 0;
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .back {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 900;
+            font-size: 13px;
+            border: 2px solid #fff;
+            padding: 7px 10px;
+            box-shadow: 4px 4px 0 #000;
+        }
+
+        .back:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .brand {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-shadow: 3px 0 #ff1744, -3px 0 #00e5ff;
+        }
+
+        .gamebox {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin: auto;
+            border: 4px solid #fff;
+            background: #050505;
+            box-shadow: 8px 8px 0 #000;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+            background: #050505;
+        }
+
+        .hud {
+            position: absolute;
+            top: 12px;
+            left: 14px;
+            right: 14px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            font-size: 13px;
+            font-weight: 900;
+            text-shadow: 2px 2px #000;
+        }
+
+        .hud span {
+            border: 2px solid #fff;
+            background: #000;
+            padding: 6px 10px;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            background: rgba(0, 0, 0, .8);
+            text-align: center;
+        }
+
+        .overlay.hidden {
+            display: none;
+        }
+
+        .title {
+            font-size: clamp(38px, 8vw, 70px);
+            font-weight: 900;
+            letter-spacing: 5px;
+            text-shadow: 5px 0 #ff1744, -5px 0 #00e5ff;
+            margin-bottom: 12px;
+        }
+
+        .sub {
+            font-size: 13px;
+            line-height: 1.7;
+            margin-bottom: 22px;
+            color: #ddd;
+        }
+
+        .btn {
+            border: 3px solid #fff;
+            background: #fff;
+            color: #000;
+            padding: 12px 22px;
+            font-family: monospace;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 5px 5px 0 #ff1744;
+        }
+
+        .btn:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 3px 3px 0 #ff1744;
+        }
+
+        .tip {
+            text-align: center;
+            margin-top: 13px;
+            font-size: 11px;
+            color: #999;
+        }
+
+        @media(max-width:700px) {
+            .wrap {
+                padding-top: 10px;
+            }
+
+            .brand {
+                font-size: 17px;
+            }
+
+            .tip {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="wrap">
+
+        <div class="top">
+            <a class="back" href="alone.html">← BACK</a>
+            <div class="brand">PIXEL RIOT</div>
+        </div>
+
+        <div class="gamebox">
+
+            <canvas id="game" width="700" height="600"></canvas>
+
+            <div class="hud">
+                <span>SCORE <b id="score">0</b></span>
+                <span>BEST <b id="best">0</b></span>
+                <span>LIVES <b id="lives">3</b></span>
+            </div>
+
+            <div class="overlay" id="start">
+
+                <div class="title">BREAKOUT</div>
+
+                <div class="sub">
+                    BREAK THE BLOCKS.<br>
+                    KEEP THE BALL ALIVE.
+                </div>
+
+                <button class="btn" id="play">
+                    START RIOT
+                </button>
+
+            </div>
+
+            <div class="overlay hidden" id="message">
+
+                <div class="title" id="messageTitle">
+                    GAME OVER
+                </div>
+
+                <div class="sub">
+                    SCORE: <b id="final">0</b>
+                </div>
+
+                <button class="btn" id="again">
+                    RETRY
+                </button>
+
+            </div>
+
+        </div>
+
+        <div class="tip">
+            ← → / A D / MOUSE = MOVE · TAP / CLICK = LAUNCH
+        </div>
+
+    </div>
+
+    <script>
+
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+
+        const W = canvas.width;
+        const H = canvas.height;
+
+        const scoreEl = document.getElementById("score");
+        const bestEl = document.getElementById("best");
+        const livesEl = document.getElementById("lives");
+
+        const startScreen = document.getElementById("start");
+        const messageScreen = document.getElementById("message");
+
+        const messageTitle = document.getElementById("messageTitle");
+        const finalEl = document.getElementById("final");
+
+        const playBtn = document.getElementById("play");
+        const againBtn = document.getElementById("again");
+
+        let score = 0;
+
+        let best =
+            Number(localStorage.getItem("pixelRiotBreakoutBest") || 0);
+
+        let lives = 3;
+        let level = 1;
+
+        let running = false;
+        let waiting = true;
+
+        let paddle;
+        let ball;
+        let bricks;
+        let particles;
+
+        let left = false;
+        let right = false;
+
+        let mouseX = W / 2;
+
+        let lastTime = 0;
+
+
+        /* =========================
+           PADDLE
+        ========================= */
+
+        function createPaddle() {
+
+            return {
+                x: W / 2 - 55,
+                y: H - 45,
+                w: 110,
+                h: 14,
+                speed: 520
+            };
+
+        }
+
+
+        /* =========================
+           BALL
+        ========================= */
+
+        function createBall() {
+
+            return {
+                x: W / 2,
+                y: H - 70,
+                r: 8,
+                vx: 250,
+                vy: -250
+            };
+
+        }
+
+
+        /* =========================
+           BRICKS
+        ========================= */
+
+        function createBricks() {
+
+            const result = [];
+
+            const rows =
+                Math.min(7, 4 + level);
+
+            const cols = 10;
+
+            const gap = 7;
+
+            const margin = 38;
+
+            const brickW =
+                (W - margin * 2 - gap * (cols - 1)) / cols;
+
+            const brickH = 23;
+
+            for (let row = 0; row < rows; row++) {
+
+                for (let col = 0; col < cols; col++) {
+
+                    result.push({
+
+                        x:
+                            margin +
+                            col * (brickW + gap),
+
+                        y:
+                            75 +
+                            row * (brickH + gap),
+
+                        w: brickW,
+                        h: brickH,
+
+                        alive: true,
+
+                        hits:
+                            row < 2 && level >= 2 ? 2 : 1
+
+                    });
+
+                }
+
+            }
+
+            return result;
+        }
+
+
+        /* =========================
+           PARTICLES
+        ========================= */
+
+        function burst(x, y) {
+
+            for (let i = 0; i < 12; i++) {
+
+                const angle =
+                    Math.random() * Math.PI * 2;
+
+                const speed =
+                    60 + Math.random() * 180;
+
+                particles.push({
+
+                    x,
+                    y,
+
+                    vx:
+                        Math.cos(angle) * speed,
+
+                    vy:
+                        Math.sin(angle) * speed,
+
+                    life:
+                        .35 + Math.random() * .4
+
+                });
+
+            }
+
+        }
+
+
+        /* =========================
+           RESET
+        ========================= */
+
+        function resetGame() {
+
+            score = 0;
+            lives = 3;
+            level = 1;
+
+            paddle = createPaddle();
+            ball = createBall();
+
+            bricks = createBricks();
+            particles = [];
+
+            waiting = true;
+            running = true;
+
+            scoreEl.textContent = "0";
+            livesEl.textContent = "3";
+
+            startScreen.classList.add("hidden");
+            messageScreen.classList.add("hidden");
+
+            lastTime = performance.now();
+
+            requestAnimationFrame(loop);
+        }
+
+
+        /* =========================
+           LAUNCH
+        ========================= */
+
+        function launchBall() {
+
+            if (!running) return;
+
+            if (waiting) {
+
+                waiting = false;
+
+                const angle =
+                    (Math.random() * .8 + .35);
+
+                const speed =
+                    310 + level * 20;
+
+                ball.vx =
+                    (Math.random() > .5 ? 1 : -1)
+                    * Math.cos(angle)
+                    * speed;
+
+                ball.vy =
+                    -Math.sin(angle)
+                    * speed;
+
+            }
+
+        }
+
+
+        /* =========================
+           KEYBOARD
+        ========================= */
+
+        window.addEventListener("keydown", e => {
+
+            if (
+                e.key === "ArrowLeft" ||
+                e.key.toLowerCase() === "a"
+            ) {
+                left = true;
+            }
+
+            if (
+                e.key === "ArrowRight" ||
+                e.key.toLowerCase() === "d"
+            ) {
+                right = true;
+            }
+
+            if (e.code === "Space") {
+
+                e.preventDefault();
+
+                if (!running) {
+                    resetGame();
+                } else {
+                    launchBall();
+                }
+
+            }
+
+        });
+
+        window.addEventListener("keyup", e => {
+
+            if (
+                e.key === "ArrowLeft" ||
+                e.key.toLowerCase() === "a"
+            ) {
+                left = false;
+            }
+
+            if (
+                e.key === "ArrowRight" ||
+                e.key.toLowerCase() === "d"
+            ) {
+                right = false;
+            }
+
+        });
+
+
+        /* =========================
+           MOUSE
+        ========================= */
+
+        canvas.addEventListener("mousemove", e => {
+
+            const rect =
+                canvas.getBoundingClientRect();
+
+            mouseX =
+                (e.clientX - rect.left)
+                * W / rect.width;
+
+        });
+
+
+        canvas.addEventListener("click", () => {
+            launchBall();
+        });
+
+
+        /* =========================
+           TOUCH
+        ========================= */
+
+        canvas.addEventListener("touchstart", e => {
+
+            e.preventDefault();
+
+            launchBall();
+
+        }, { passive: false });
+
+
+        canvas.addEventListener("touchmove", e => {
+
+            e.preventDefault();
+
+            const rect =
+                canvas.getBoundingClientRect();
+
+            mouseX =
+                (e.touches[0].clientX - rect.left)
+                * W / rect.width;
+
+        }, { passive: false });
+
+
+        /* =========================
+           COLLISION
+        ========================= */
+
+        function circleRectCollision(circle, rect) {
+
+            const closestX =
+                Math.max(
+                    rect.x,
+                    Math.min(circle.x, rect.x + rect.w)
+                );
+
+            const closestY =
+                Math.max(
+                    rect.y,
+                    Math.min(circle.y, rect.y + rect.h)
+                );
+
+            const dx =
+                circle.x - closestX;
+
+            const dy =
+                circle.y - closestY;
+
+            return dx * dx + dy * dy <
+                circle.r * circle.r;
+
+        }
+
+
+        /* =========================
+           UPDATE
+        ========================= */
+
+        function update(dt) {
+
+            if (!running) return;
+
+
+            /* PADDLE */
+
+            if (left) {
+                paddle.x -= paddle.speed * dt;
+            }
+
+            if (right) {
+                paddle.x += paddle.speed * dt;
+            }
+
+
+            /* Mouse follows */
+
+            if (!left && !right) {
+
+                paddle.x =
+                    mouseX - paddle.w / 2;
+
+            }
+
+
+            paddle.x =
+                Math.max(
+                    0,
+                    Math.min(
+                        W - paddle.w,
+                        paddle.x
+                    )
+                );
+
+
+            /* Waiting state */
+
+            if (waiting) {
+
+                ball.x =
+                    paddle.x + paddle.w / 2;
+
+                ball.y =
+                    paddle.y - ball.r - 3;
+
+                updateParticles(dt);
+
+                return;
+            }
+
+
+            /* BALL */
+
+            ball.x += ball.vx * dt;
+            ball.y += ball.vy * dt;
+
+
+            /* WALLS */
+
+            if (ball.x - ball.r <= 0) {
+
+                ball.x = ball.r;
+                ball.vx = Math.abs(ball.vx);
+
+            }
+
+            if (ball.x + ball.r >= W) {
+
+                ball.x = W - ball.r;
+                ball.vx = -Math.abs(ball.vx);
+
+            }
+
+            if (ball.y - ball.r <= 0) {
+
+                ball.y = ball.r;
+                ball.vy = Math.abs(ball.vy);
+
+            }
+
+
+            /* PADDLE */
+
+            if (
+                ball.vy > 0 &&
+                circleRectCollision(ball, paddle)
+            ) {
+
+                ball.y =
+                    paddle.y - ball.r - 1;
+
+                const hitPosition =
+                    (ball.x -
+                        (paddle.x + paddle.w / 2))
+                    / (paddle.w / 2);
+
+                const speed =
+                    Math.min(
+                        650,
+                        Math.hypot(ball.vx, ball.vy) + 5
+                    );
+
+                ball.vx =
+                    hitPosition * speed;
+
+                ball.vy =
+                    -Math.sqrt(
+                        Math.max(
+                            10000,
+                            speed * speed - ball.vx * ball.vx
+                        )
+                    );
+
+            }
+
+
+            /* BRICKS */
+
+            for (const brick of bricks) {
+
+                if (!brick.alive) continue;
+
+                if (circleRectCollision(ball, brick)) {
+
+                    brick.hits--;
+
+                    burst(
+                        ball.x,
+                        ball.y
+                    );
+
+                    ball.vy *= -1;
+
+                    if (brick.hits <= 0) {
+
+                        brick.alive = false;
+
+                        score +=
+                            100 * level;
+
+                    } else {
+
+                        score +=
+                            50 * level;
+
+                    }
+
+                    scoreEl.textContent =
+                        score;
+
+                    break;
+                }
+
+            }
+
+
+            /* LEVEL COMPLETE */
+
+            if (
+                bricks.every(brick => !brick.alive)
+            ) {
+
+                level++;
+
+                if (level > 5) {
+
+                    winGame();
+                    return;
+
+                }
+
+                bricks = createBricks();
+
+                waiting = true;
+
+                ball = createBall();
+
+            }
+
+
+            /* BALL LOST */
+
+            if (ball.y - ball.r > H) {
+
+                lives--;
+
+                livesEl.textContent =
+                    lives;
+
+                if (lives <= 0) {
+
+                    endGame();
+                    return;
+
+                }
+
+                waiting = true;
+
+                ball = createBall();
+
+            }
+
+
+            updateParticles(dt);
+        }
+
+
+        /* =========================
+           PARTICLES
+        ========================= */
+
+        function updateParticles(dt) {
+
+            for (const p of particles) {
+
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+
+                p.vy += 300 * dt;
+
+                p.life -= dt;
+
+            }
+
+            particles =
+                particles.filter(
+                    p => p.life > 0
+                );
+
+        }
+
+
+        /* =========================
+           DRAW
+        ========================= */
+
+        function draw() {
+
+            ctx.clearRect(0, 0, W, H);
+
+
+            /* GRID */
+
+            ctx.strokeStyle =
+                "rgba(255,255,255,.035)";
+
+            ctx.lineWidth = 1;
+
+            for (let x = 0; x < W; x += 35) {
+
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, H);
+                ctx.stroke();
+
+            }
+
+            for (let y = 0; y < H; y += 35) {
+
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+
+            }
+
+
+            /* BRICKS */
+
+            for (const brick of bricks) {
+
+                if (!brick.alive) continue;
+
+                ctx.fillStyle =
+                    brick.hits === 2
+                        ? "#ff1744"
+                        : "#00e5ff";
+
+                ctx.fillRect(
+                    brick.x,
+                    brick.y,
+                    brick.w,
+                    brick.h
+                );
+
+                ctx.strokeStyle = "#fff";
+
+                ctx.lineWidth = 2;
+
+                ctx.strokeRect(
+                    brick.x,
+                    brick.y,
+                    brick.w,
+                    brick.h
+                );
+
+            }
+
+
+            /* PADDLE */
+
+            ctx.fillStyle = "#fff";
+
+            ctx.fillRect(
+                paddle.x,
+                paddle.y,
+                paddle.w,
+                paddle.h
+            );
+
+            ctx.fillStyle = "#00e5ff";
+
+            ctx.fillRect(
+                paddle.x + 5,
+                paddle.y + 3,
+                paddle.w - 10,
+                5
+            );
+
+
+            /* BALL */
+
+            ctx.fillStyle = "#fff";
+
+            ctx.beginPath();
+
+            ctx.arc(
+                ball.x,
+                ball.y,
+                ball.r,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+
+            /* PARTICLES */
+
+            for (const p of particles) {
+
+                ctx.globalAlpha =
+                    Math.max(0, p.life);
+
+                ctx.fillStyle = "#fff";
+
+                ctx.fillRect(
+                    p.x,
+                    p.y,
+                    4,
+                    4
+                );
+
+            }
+
+            ctx.globalAlpha = 1;
+
+
+            /* LEVEL */
+
+            ctx.fillStyle =
+                "rgba(255,255,255,.55)";
+
+            ctx.font =
+                "900 12px monospace";
+
+            ctx.fillText(
+                "LEVEL " + level,
+                14,
+                H - 12
+            );
+
+        }
+
+
+        /* =========================
+           GAME OVER
+        ========================= */
+
+        function endGame() {
+
+            running = false;
+
+            finalEl.textContent =
+                score;
+
+            messageTitle.textContent =
+                "GAME OVER";
+
+            if (score > best) {
+
+                best = score;
+
+                localStorage.setItem(
+                    "pixelRiotBreakoutBest",
+                    best
+                );
+
+                bestEl.textContent =
+                    best;
+
+                messageTitle.textContent =
+                    "NEW BEST!";
+            }
+
+            messageScreen.classList.remove("hidden");
+
+            draw();
+
+        }
+
+
+        /* =========================
+           WIN
+        ========================= */
+
+        function winGame() {
+
+            running = false;
+
+            finalEl.textContent =
+                score;
+
+            messageTitle.textContent =
+                "RIOT CLEARED";
+
+            if (score > best) {
+
+                best = score;
+
+                localStorage.setItem(
+                    "pixelRiotBreakoutBest",
+                    best
+                );
+
+                bestEl.textContent =
+                    best;
+
+            }
+
+            messageScreen.classList.remove("hidden");
+
+            draw();
+
+        }
+
+
+        /* =========================
+           LOOP
+        ========================= */
+
+        function loop(time) {
+
+            if (!running) return;
+
+            const dt =
+                Math.min(
+                    (time - lastTime) / 1000,
+                    .035
+                );
+
+            lastTime = time;
+
+            update(dt);
+            draw();
+
+            if (running) {
+
+                requestAnimationFrame(loop);
+
+            }
+
+        }
+
+
+        /* =========================
+           BUTTONS
+        ========================= */
+
+        playBtn.addEventListener(
+            "click",
+            resetGame
+        );
+
+        againBtn.addEventListener(
+            "click",
+            resetGame
+        );
+
+
+        /* INITIAL */
+
+        paddle = createPaddle();
+        ball = createBall();
+        bricks = createBricks();
+        particles = [];
+
+        bestEl.textContent = best;
+
+        draw();
+
+    </script>
+
+</body>
+
+</html>
+```

@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>PIXEL RIOT — Prototype</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050608;color:#fff;font-family:monospace}
+body{user-select:none}
+canvas{display:block;width:100vw;height:100vh;background:#07090d;image-rendering:pixelated}
+#hud{position:fixed;inset:0;pointer-events:none}
+.hudbox{position:absolute;background:rgba(5,7,10,.88);border:2px solid #777;padding:8px 10px;box-shadow:4px 4px #000;font-weight:900;font-size:12px}
+#roleHud{left:14px;top:14px}
+#taskHud{left:14px;top:57px}
+#eventHud{left:14px;top:100px;max-width:340px;color:#ddd}
+#helpHud{right:14px;bottom:14px;text-align:right;color:#aaa}
+#locationHud{right:14px;top:14px;text-align:right}
+#suspicionHud{right:14px;top:57px;text-align:right}
+#prompt{position:absolute;left:50%;bottom:68px;transform:translateX(-50%);background:#fff;color:#000;padding:10px 18px;border:3px solid #000;box-shadow:5px 5px #000;font-weight:900;display:none}
+#banner{position:absolute;left:50%;top:90px;transform:translateX(-50%);padding:14px 24px;background:#090b10;border:3px solid #fff;box-shadow:7px 7px #000;font-weight:900;letter-spacing:2px;display:none;z-index:10}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;z-index:20}
+.panel{width:min(720px,92vw);background:#090b10;border:4px solid #fff;box-shadow:12px 12px #000;padding:30px}
+.hidden{display:none!important}
+.kicker{font-size:11px;letter-spacing:4px;color:#777}
+h1{margin:8px 0;font-size:52px;letter-spacing:6px}
+h2{margin:6px 0 18px;font-size:28px}
+.desc{color:#aaa;line-height:1.6}
+button{font:900 13px monospace;cursor:pointer;border:3px solid #fff;background:#fff;color:#000;padding:12px 18px}
+button:hover{filter:invert(1)}
+.roleCrew{color:#fff}
+.roleRogue{color:#e44}
+.bigButton{margin-top:22px;min-width:200px}
+#taskPanel{display:none}
+#taskPanel.open{display:block}
+.taskContent{text-align:center}
+.taskGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.taskBtn{background:#111;color:#fff;border-color:#555;min-height:70px}
+.taskBtn.selected{border-color:#fff;box-shadow:0 0 18px #fff}
+.wires{display:grid;grid-template-columns:1fr 1fr;gap:60px}
+.wire{display:block;width:100%;margin:8px 0;border-width:3px;background:#111;color:#fff}
+.red{border-color:#e44}.blue{border-color:#58f}.green{border-color:#4d6}.yellow{border-color:#edc83d}
+.meter{height:30px;border:3px solid #555;background:#15171c;position:relative;margin:30px 0}
+.safe{position:absolute;left:42%;width:18%;height:100%;background:#4d6}
+.marker{position:absolute;top:-5px;width:8px;height:36px;background:#fff}
+.scan{height:230px;border:3px solid #555;position:relative;background:repeating-linear-gradient(0deg,#0d1714,#0d1714 3px,#12241f 4px)}
+.signalDot{position:absolute;width:22px;height:22px;border:3px solid #fff;box-shadow:0 0 15px #fff;cursor:pointer}
+.sliders label{display:grid;grid-template-columns:80px 1fr;gap:12px;margin:20px 0}
+#meetingPanel{width:min(980px,94vw)}
+.evidence{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+.evidence div{background:#111;border:2px solid #333;padding:12px;min-height:80px}
+.evidence b{display:block;margin-bottom:7px}
+.evidence span{font-size:11px;color:#888}
+.votes{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
+.vote.dead{opacity:.35}
+.vote.selected{border-color:#edc83d;box-shadow:0 0 15px #edc83d}
+#meetingStatus{text-align:center;color:#aaa;margin:14px}
+#chatLog .chatLine{margin:6px 0;line-height:1.35}#chatLog .chatName{color:#4cff8a}#chatLog .chatSystem{color:#edc83d}#chatLog .chatMine{color:#58f}
+#eventPanel{text-align:center}
+.eventTitle{font-size:46px;font-weight:900;letter-spacing:3px}
+#eventTimer{font-size:34px;margin:20px}
+.flash{animation:flash .25s infinite alternate}
+@keyframes flash{to{filter:brightness(2)}}
+@media(max-width:700px){
+ h1{font-size:38px}.panel{padding:20px}.evidence{grid-template-columns:1fr 1fr}.votes{grid-template-columns:repeat(2,1fr)}
+ #helpHud{font-size:10px}.hudbox{font-size:10px}
+}
+
+.mp-lobby{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.94);display:none;align-items:center;justify-content:center;padding:15px;font-family:monospace}.mp-lobby.show{display:flex}.mp-box{width:min(720px,94vw);background:#090c11;border:4px solid #fff;box-shadow:12px 12px #000;padding:28px}.mp-box h1{margin:8px 0;font-size:42px}.mp-code{font-size:42px;letter-spacing:8px;color:#4cff8a;margin:16px 0}.mp-players{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:16px 0}.mp-player{padding:9px 4px;background:#10141a;border:2px solid #303944;text-align:center;font-size:10px}.mp-player.human{border-color:#fff}.mp-row{display:flex;gap:8px;flex-wrap:wrap}.mp-row button{background:#fff;color:#000;border:3px solid #fff;padding:12px 17px;font:900 12px monospace;cursor:pointer}.mp-row button:last-child{background:#4cff8a;border-color:#4cff8a}.mp-row button:disabled{opacity:.35}
+@media(max-width:700px){.mp-players{grid-template-columns:repeat(2,1fr)}}
+
+.killBtn{position:fixed;right:22px;bottom:78px;display:none;background:#8e1021;color:#fff;border:3px solid #fff;padding:13px 18px;font:900 13px monospace;z-index:8;box-shadow:5px 5px 0 #000}.killBtn.ready{display:block}.killBtn.cool{opacity:.45}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="mpLobby" class="mp-lobby">
+  <div class="mp-box">
+    <div class="kicker">PIXEL RIOT // PRIVATE ROOM</div>
+    <h1 id="mpTitle">CONNECTING...</h1>
+    <div id="mpDesc">Opening multiplayer...</div>
+    <div id="mpCode" class="mp-code">------</div>
+    <div id="mpCount">1 / 10 PLAYERS</div>
+    <div id="mpPlayers" class="mp-players"></div>
+    <div class="mp-row"><button id="mpCopy">COPY CODE</button><button id="mpStart">START RIOT</button></div>
+  </div>
+</div>
+
+<div id="hud">
+  <div id="roleHud" class="hudbox">ROLE: <span id="roleText">—</span></div>
+  <div id="taskHud" class="hudbox">TASKS: <span id="taskText">0 / 7</span></div>
+  <div id="eventHud" class="hudbox">SYSTEM: <span id="eventText">ONLINE</span></div>
+  <div id="locationHud" class="hudbox">SECTOR: <span id="locationText">CENTRAL</span></div>
+  <div id="suspicionHud" class="hudbox">SUSPICION: <span id="suspicionText">0%</span></div>
+  <div id="helpHud" class="hudbox">WASD / ARROWS MOVE · E TASK · Q SABOTAGE · K ELIMINATE · SPACE MEETING</div>
+  <div id="prompt">E — INTERACT</div><button id="killBtn" class="killBtn">☠ K</button>
+  <div id="banner"></div>
+</div>
+
+<div id="overlay">
+  <div id="rolePanel" class="panel">
+    <div class="kicker">PIXEL RIOT // PROTOTYPE</div>
+    <h1>IDENTITY</h1>
+    <h2 id="roleTitle">LOADING...</h2>
+    <div id="roleDesc" class="desc"></div>
+    <button id="startBtn" class="bigButton">ENTER RIOT</button>
+  </div>
+
+  <div id="taskPanel" class="panel">
+    <div class="kicker">STATION OBJECTIVE</div>
+    <h2 id="taskTitle">TASK</h2>
+    <div id="taskDesc" class="desc"></div>
+    <div id="taskContent" class="taskContent"></div>
+    <button id="closeTask">EXIT</button>
+  </div>
+
+  <div id="eventPanel" class="panel hidden">
+    <div class="kicker">SYSTEM EVENT</div>
+    <div id="eventTitle" class="eventTitle">POWER OUTAGE</div>
+    <div id="eventDesc" class="desc"></div>
+    <div id="eventTimer">30</div>
+    <button id="eventRepair">RESPOND</button>
+  </div>
+
+  <div id="meetingPanel" class="panel hidden">
+    <div class="kicker">RIOT MEETING // <span id="meetingPhase">DISCUSSION</span></div>
+    <h2>WHO IS THE ROGUE?</h2>
+    <div id="meetingReason" class="roleRogue">SYSTEM INCIDENT</div>
+    <div id="meetingTimer" style="font-size:28px;text-align:center;margin:8px 0;color:#edc83d">DISCUSSION 35s</div>
+    <div id="evidence" class="evidence"></div>
+    <div id="chatLog" style="height:190px;overflow-y:auto;background:#050608;border:3px solid #333;padding:10px;margin:12px 0;text-align:left"></div>
+    <div id="chatComposer" style="display:flex;gap:8px;margin-bottom:14px">
+      <input id="chatInput" maxlength="120" placeholder="TYPE YOUR ALIBI / ACCUSATION..." style="flex:1;background:#111;color:#fff;border:3px solid #555;padding:12px;font:900 12px monospace;outline:none">
+      <button id="sendChat">SEND</button>
+    </div>
+    <div id="voteArea" class="hidden">
+      <div class="kicker">CAST YOUR VOTE</div>
+      <div id="votes" class="votes"></div>
+      <div id="meetingStatus">SELECT A PLAYER</div>
+      <button id="skipVote">SKIP VOTE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- CORE ---------- */
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const W=2800,H=1800;
+let viewW=innerWidth,viewH=innerHeight;
+function resize(){viewW=innerWidth;viewH=innerHeight;canvas.width=viewW;canvas.height=viewH}
+addEventListener("resize",resize);resize();
+
+const keys={};
+addEventListener("keydown",e=>{
+  keys[e.key.toLowerCase()]=true;
+  if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase())) e.preventDefault();
+  if(game.started && e.key.toLowerCase()==="e") interact();
+  if(game.started && e.key.toLowerCase()==="q") sabotage();
+  if(game.started && e.key.toLowerCase()==="k") killNearby();
+  if(game.started && e.key===" ") emergencyMeeting("MANUAL EMERGENCY");
+});
+addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+
+/* ---------- GAME STATE ---------- */
+const game={
+ started:false, dead:false, role:Math.random()<.2?"ROGUE":"CREW",
+ completed:new Set(), suspicion:0,
+ event:null, eventEnd:0, meeting:false,
+ sabotageReady:true, killReady:true, killCooldown:0, evidence:[],
+ elimination:null
+};
+
+const player={x:1320,y:820,size:28,speed:4.2,name:"YOU"};
+const bots=[
+ ["NOVA","#e85d5d"],["BYTE","#5d8ee8"],["RIFT","#b05de8"],["KODA","#5de89b"],
+ ["VEX","#edc83d"],["MISO","#e889c8"],["ZERO","#5dd6e8"],["ECHO","#9b9b9b"],["ONYX","#e0e0e0"]
+].map((x,i)=>({name:x[0],color:x[1],x:1180+i%3*180,y:720+Math.floor(i/3)*170,size:26,speed:1.7,dx:0,dy:0,think:0,trust:Math.random(),suspicion:Math.random(),memory:.4+Math.random()*.6}));
+
+/* ---------- MAP ---------- */
+const rooms=[
+ {name:"CONTROL",x:100,y:100,w:600,h:380},
+ {name:"LAB",x:1050,y:100,w:600,h:380},
+ {name:"SECURITY",x:2000,y:100,w:600,h:380},
+ {name:"CENTRAL",x:800,y:650,w:1000,h:400},
+ {name:"STORAGE",x:100,y:1250,w:600,h:380},
+ {name:"ENGINEERING",x:1050,y:1300,w:600,h:330},
+ {name:"REACTOR",x:2000,y:1250,w:600,h:380}
+];
+
+const tasks=[
+ {id:"CONTROL",name:"SYSTEM REPAIR",x:420,y:285,color:"#e44"},
+ {id:"LAB",name:"DATA SYNC",x:1280,y:285,color:"#58f"},
+ {id:"SECURITY",name:"SECURITY SCAN",x:2240,y:285,color:"#4d6"},
+ {id:"CENTRAL",name:"SIGNAL TUNING",x:1320,y:800,color:"#d965a0"},
+ {id:"STORAGE",name:"SORT CARGO",x:330,y:1400,color:"#a64bd9"},
+ {id:"ENGINEERING",name:"POWER FLOW",x:1320,y:1430,color:"#42b8b8"},
+ {id:"REACTOR",name:"CORE CALIBRATION",x:2210,y:1400,color:"#edc83d"}
+];
+
+function rect(x,y,w,h){return {x,y,w,h}}
+/* Collision walls deliberately leave door gaps. */
+const walls=[
+ rect(100,100,600,12),rect(100,468,600,12),rect(100,100,12,380),rect(688,100,12,150),rect(688,330,12,150),
+ rect(1050,100,600,12),rect(1050,468,600,12),rect(1050,100,12,150),rect(1050,330,12,150),rect(1638,100,12,380),
+ rect(2000,100,600,12),rect(2000,468,600,12),rect(2000,100,12,150),rect(2000,330,12,150),rect(2588,100,12,380),
+ rect(800,650,1000,12),rect(800,1038,1000,12),rect(800,650,12,125),rect(800,825,12,225),rect(1788,650,12,125),rect(1788,825,12,225),
+ rect(100,1250,600,12),rect(100,1618,600,12),rect(100,1250,12,380),rect(688,1250,12,120),rect(688,1430,12,200),
+ rect(1050,1300,220,12),rect(1380,1300,270,12),rect(1050,1618,600,12),rect(1050,1300,12,330),rect(1638,1300,12,330),
+ rect(2000,1250,600,12),rect(2000,1618,600,12),rect(2000,1250,12,120),rect(2000,1430,12,200),rect(2588,1250,12,380)
+];
+
+function circleRect(cx,cy,r,w){
+  const nx=Math.max(w.x,Math.min(cx,w.x+w.w)),ny=Math.max(w.y,Math.min(cy,w.y+w.h));
+  return Math.hypot(cx-nx,cy-ny)<r;
+}
+function blocked(x,y){
+  return walls.some(w=>circleRect(x,y,player.size/2,w));
+}
+function moveEntity(e,dx,dy){
+  let nx=e.x+dx,ny=e.y;
+  if(!walls.some(w=>circleRect(nx,ny,e.size/2,w))) e.x=nx;
+  nx=e.x;ny=e.y+dy;
+  if(!walls.some(w=>circleRect(nx,ny,e.size/2,w))) e.y=ny;
+  e.x=Math.max(20,Math.min(W-20,e.x));e.y=Math.max(20,Math.min(H-20,e.y));
+}
+function roomAt(x,y){
+  const r=rooms.find(r=>x>r.x&&x<r.x+r.w&&y>r.y&&y<r.y+r.h);
+  return r?r.name:"CORRIDOR";
+}
+
+/* ---------- UI ---------- */
+const $=id=>document.getElementById(id);
+function banner(t){
+  $("banner").textContent=t;$("banner").style.display="block";
+  clearTimeout(banner.timer);banner.timer=setTimeout(()=>$("banner").style.display="none",2200);
+}
+function updateHud(){
+  $("roleText").textContent=game.role;
+  $("roleText").className=game.role==="ROGUE"?"roleRogue":"roleCrew";
+  $("taskText").textContent=`${game.completed.size} / 7`;
+  $("eventText").textContent=game.event?game.event.name:"ONLINE";
+  $("locationText").textContent=roomAt(player.x,player.y);
+  $("suspicionText").textContent=game.suspicion+"%";
+}
+function addEvidence(subject,detail){
+  game.evidence.push({subject,detail,time:Date.now()});
+  if(game.evidence.length>12)game.evidence.shift();
+}
+function showOverlay(){ $("overlay").style.display="flex"; }
+function hideOverlay(){ $("overlay").style.display="none"; }
+
+/* ---------- ROLE ---------- */
+$("roleTitle").textContent=game.role==="ROGUE"?"ROGUE — SYSTEM BREAKER":"CREW — SYSTEM OPERATIVE";
+$("roleTitle").className=game.role==="ROGUE"?"roleRogue":"roleCrew";
+$("roleDesc").textContent=game.role==="ROGUE"
+ ?"Blend in. Fake objectives. Press Q to sabotage. Press K near a target to eliminate them. Survive the vote."
+ :"Complete all station tasks. Watch movement. Use SPACE to call an emergency meeting.";
+
+$("startBtn").onclick=()=>{
+  game.started=true;game.dead=false;hideOverlay();banner(game.role==="ROGUE"?"YOU ARE THE ROGUE":"YOU ARE CREW");updateHud();
+};
+
+/* ---------- TASKS ---------- */
+let activeTask=null,taskTimer=null;
+function nearestTask(){
+  let best=null,d=Infinity;
+  for(const t of tasks){
+    if(game.completed.has(t.id))continue;
+    const dd=Math.hypot(player.x-t.x,player.y-t.y);
+    if(dd<95&&dd<d){best=t;d=dd}
+  }
+  return best;
+}
+function interact(){
+  if(game.meeting||game.event||activeTask)return;
+  const t=nearestTask();
+  if(t)openTask(t);
+}
+function openTask(t){
+  activeTask=t;$("overlay").style.display="flex";$("rolePanel").classList.add("hidden");$("eventPanel").classList.add("hidden");$("meetingPanel").classList.add("hidden");$("taskPanel").classList.add("open");
+  $("taskTitle").textContent=t.name;$("taskDesc").textContent="Complete the objective to restore station systems.";
+  const c=$("taskContent");c.innerHTML="";
+  if(t.id==="CONTROL")wireTask(c,t);
+  else if(t.id==="LAB")memoryTask(c,t);
+  else if(t.id==="REACTOR")timingTask(c,t);
+  else if(t.id==="SECURITY")scanTask(c,t);
+  else if(t.id==="STORAGE")sortTask(c,t);
+  else if(t.id==="ENGINEERING")powerTask(c,t);
+  else signalTask(c,t);
+}
+function closeTask(){activeTask=null;clearInterval(taskTimer);$("taskPanel").classList.remove("open");hideOverlay();updateHud()}
+$("closeTask").onclick=closeTask;
+
+function completeTask(t){
+  game.completed.add(t.id);addEvidence("TASK",`${t.name} completed by YOU.`);
+  closeTask();banner("✓ TASK COMPLETE // "+t.name);updateHud();
+  if(game.completed.size===7){banner("✓ ALL TASKS COMPLETE — CREW WINS");game.started=false}
+}
+function wireTask(c,t){
+  const colors=["red","blue","green","yellow"];let sel=null,n=0;
+  c.innerHTML=`<div class="desc">Match every source to the same-color target.</div><div class="wires"><div>${colors.map(x=>`<button class="wire ${x}" data-s="${x}">${x.toUpperCase()} SOURCE</button>`).join("")}</div><div>${[...colors].reverse().map(x=>`<button class="wire ${x}" data-t="${x}">${x.toUpperCase()} TARGET</button>`).join("")}</div></div><p id="taskMsg">0 / 4 CONNECTED</p>`;
+  c.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{sel=b.dataset.s;c.querySelectorAll(".wire").forEach(x=>x.classList.remove("selected"));b.classList.add("selected")});
+  c.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{if(!sel)return;if(sel===b.dataset.t){b.disabled=true;b.classList.add("selected");c.querySelector(`[data-s="${sel}"]`).disabled=true;n++;sel=null;$("taskMsg").textContent=`${n} / 4 CONNECTED`;if(n===4)completeTask(t)}else $("taskMsg").textContent="WRONG CABLE"});
+}
+function memoryTask(c,t){
+  const seq=Array.from({length:5},()=>Math.floor(Math.random()*4));let i=0,input=[],ready=false;
+  c.innerHTML=`<div class="taskGrid">${["A","B","C","D"].map(x=>`<button class="taskBtn mem" data-n="${x}">${x}</button>`).join("")}</div><p id="taskMsg">WATCH...</p>`;
+  const bs=[...c.querySelectorAll(".mem")];
+  function flash(){if(i>=seq.length){ready=true;$("taskMsg").textContent="YOUR TURN";return}bs[seq[i]].classList.add("selected");setTimeout(()=>{bs[seq[i]].classList.remove("selected");i++;setTimeout(flash,160)},420)}
+  setTimeout(flash,500);
+  bs.forEach((b,n)=>b.onclick=()=>{if(!ready)return;input.push(n);if(n!==seq[input.length-1]){ready=false;i=0;input=[];$("taskMsg").textContent="WRONG — REWATCH";setTimeout(flash,700)}else if(input.length===seq.length)completeTask(t)});
+}
+function timingTask(c,t){
+  c.innerHTML=`<div class="meter"><div class="safe"></div><div class="marker" id="mark"></div></div><button id="lock">LOCK CORE</button><p id="taskMsg">CALIBRATING...</p>`;
+  let p=5,d=1;taskTimer=setInterval(()=>{p+=d*2;if(p>94||p<5)d*=-1;$("mark").style.left=p+"%"},30);
+  $("lock").onclick=()=>{clearInterval(taskTimer);if(p>42&&p<60)completeTask(t);else{$("taskMsg").textContent="UNSTABLE";setTimeout(()=>timingTask(c,t),500)}};
+}
+function scanTask(c,t){
+  c.innerHTML=`<div class="scan" id="scan"><div class="signalDot" id="dot"></div></div><p id="taskMsg">MOVE THE CURSOR. FIND THE SIGNAL.</p>`;
+  const dot=$("dot"),field=$("scan");dot.style.left=(10+Math.random()*80)+"%";dot.style.top=(10+Math.random()*70)+"%";
+  dot.onclick=()=>completeTask(t);
+  field.onmousemove=e=>{const a=dot.getBoundingClientRect(),d=Math.hypot(e.clientX-a.left-11,e.clientY-a.top-11);$("taskMsg").textContent=d<60?"SIGNAL VERY CLOSE":d<130?"SIGNAL DETECTED":"SEARCHING..."};
+}
+function sortTask(c,t){
+  const data=[["BATTERY","POWER"],["MEDKIT","MEDICAL"],["CABLE","ENGINEERING"],["FOOD","SUPPLY"]];let selected=null,n=0;
+  c.innerHTML=`<div class="taskGrid">${data.map((x,i)=>`<button class="taskBtn item" data-i="${i}">${x[0]}</button>`).join("")}</div><div class="taskGrid">${["POWER","MEDICAL","ENGINEERING","SUPPLY"].map(x=>`<button class="taskBtn bay" data-b="${x}">${x} BAY</button>`).join("")}</div><p id="taskMsg">0 / 4 SORTED</p>`;
+  c.querySelectorAll(".item").forEach(b=>b.onclick=()=>{selected=+b.dataset.i;c.querySelectorAll(".item").forEach(x=>x.classList.remove("selected"));b.classList.add("selected")});
+  c.querySelectorAll(".bay").forEach(b=>b.onclick=()=>{if(selected===null)return;if(data[selected][1]===b.dataset.b){c.querySelector(`[data-i="${selected}"]`).disabled=true;b.disabled=true;n++;selected=null;$("taskMsg").textContent=`${n} / 4 SORTED`;if(n===4)completeTask(t)}else $("taskMsg").textContent="WRONG BAY"});
+}
+function powerTask(c,t){
+  const nodes=["A","B","C","D","E","F"];let n=0;
+  c.innerHTML=`<div class="taskGrid">${nodes.map(x=>`<button class="taskBtn power" data-n="${x}">${x}</button>`).join("")}</div><p id="taskMsg">POWER OFFLINE</p>`;
+  c.querySelectorAll(".power").forEach(b=>b.onclick=()=>{if(b.dataset.n===nodes[n]){b.classList.add("selected");b.disabled=true;n++;$("taskMsg").textContent=`NODE ${b.dataset.n} ONLINE`;if(n===6)completeTask(t)}else $("taskMsg").textContent="ROUTE ERROR"});
+}
+function signalTask(c,t){
+  const target=[42,68,31];
+  c.innerHTML=`<div class="sliders">${["LOW","MID","HIGH"].map((x,i)=>`<label>${x}<input type="range" min="0" max="100" value="${Math.floor(Math.random()*100)}" data-i="${i}"></label>`).join("")}</div><p id="taskMsg">SIGNAL LOCK: 0%</p>`;
+  const ss=[...c.querySelectorAll("input")];
+  const check=()=>{let score=ss.reduce((a,s,i)=>a+Math.max(0,100-Math.abs(+s.value-target[i])*4),0)/3;$("taskMsg").textContent=`SIGNAL LOCK: ${Math.round(score)}%`;if(score>94)completeTask(t)};
+  ss.forEach(x=>x.oninput=check);
+}
+
+/* ---------- ELIMINATION ---------- */
+function nearestKillTarget(){
+  const all = (window.__MP_GET_PLAYERS ? window.__MP_GET_PLAYERS() : bots.map(b=>({id:b.name,name:b.name,x:b.x,y:b.y,alive:true,human:false})));
+  let best=null,bd=Infinity;
+  for(const p of all){
+    if(!p || !p.alive || p.id===window.__MP_ID || p.name==='YOU' || p.role==='ROGUE') continue;
+    const d=Math.hypot(p.x-player.x,p.y-player.y);
+    if(d<bd){bd=d;best=p}
+  }
+  return best && bd<105 ? {target:best,distance:bd} : null;
+}
+function killNearby(){
+  if(!game.started || game.dead || game.role!=='ROGUE' || game.meeting || game.event || !game.killReady || game.elimination) return;
+  const hit=nearestKillTarget();
+  if(!hit){banner('NO TARGET IN RANGE');return}
+  game.killReady=false; game.killCooldown=22;
+  if(window.__MP_SEND) window.__MP_SEND({type:'kill',targetId:hit.target.id,targetName:hit.target.name});
+  else applyLocalKill(hit.target.id,hit.target.name);
+  const cd=setInterval(()=>{game.killCooldown--;if(game.killCooldown<=0){clearInterval(cd);game.killReady=true;banner('⚡ ELIMINATE READY')}} ,1000);
+}
+function applyLocalKill(id,name){
+  const b=bots.find(x=>x.name===name);
+  if(b)b.alive=false;
+  game.elimination={name,x:b?.x||player.x,y:b?.y||player.y,time:Date.now()};
+  addEvidence('BODY',`${name} was found down near ${getLocation(player.x,player.y)}.`);
+  banner('☠ '+name+' ELIMINATED');
+  setTimeout(()=>{ if(game.started&&!game.meeting&&!game.event) emergencyMeeting('BODY DISCOVERED // '+name); },1100);
+}
+/* ---------- EVENTS ---------- */
+const EVENT_TYPES=[
+ {id:"POWER",name:"POWER OUTAGE",desc:"Restore station power before time expires.",duration:30},
+ {id:"LOCKDOWN",name:"LOCKDOWN",desc:"Override the station lockdown.",duration:25},
+ {id:"SIGNAL",name:"SIGNAL JAM",desc:"Restore communications.",duration:28},
+ {id:"REACTOR",name:"REACTOR FAILURE",desc:"Stabilize the reactor.",duration:35}
+];
+function sabotage(){
+  if(!game.started||game.role!=="ROGUE"||!game.sabotageReady||game.event||game.meeting)return;
+  game.sabotageReady=false;const ev=EVENT_TYPES[Math.floor(Math.random()*EVENT_TYPES.length)];
+  startEvent(ev,"ROGUE SABOTAGE");game.suspicion=Math.min(100,game.suspicion+Math.floor(Math.random()*7)+3);updateHud();
+  setTimeout(()=>game.sabotageReady=true,18000);
+}
+function startEvent(ev,source){
+  game.event={...ev};game.eventEnd=Date.now()+ev.duration*1000;
+  $("overlay").style.display="flex";$("rolePanel").classList.add("hidden");$("taskPanel").classList.remove("open");$("meetingPanel").classList.add("hidden");$("eventPanel").classList.remove("hidden");
+  $("eventTitle").textContent=ev.name;$("eventDesc").textContent=ev.desc;$("eventRepair").textContent="RESPOND";
+  $("eventPanel").classList.toggle("flash",ev.id==="REACTOR");banner("⚠ "+ev.name+" // "+source);
+  addEvidence("EVENT",`${ev.name} started.`);
+  eventLoop();
+}
+function eventLoop(){
+  if(!game.event)return;
+  const left=Math.max(0,Math.ceil((game.eventEnd-Date.now())/1000));$("eventTimer").textContent=left+"s";
+  if(left<=0){failEvent();return}
+  requestAnimationFrame(eventLoop);
+}
+$("eventRepair").onclick=()=>{if(!game.event)return;completeEvent()};
+function completeEvent(){if(!game.event)return;const name=game.event.name;game.event=null;$("eventPanel").classList.add("hidden");hideOverlay();$("eventPanel").classList.remove("flash");banner("✓ SYSTEM RESTORED // "+name);updateHud()}
+function failEvent(){if(!game.event)return;const name=game.event.name;game.event=null;$("eventPanel").classList.add("hidden");hideOverlay();$("eventPanel").classList.remove("flash");banner("✕ "+name+" FAILED");setTimeout(()=>emergencyMeeting(name+" FAILED"),700);updateHud()}
+
+/* ---------- MEETINGS / DISCUSSION / VOTING ---------- */
+let meetingTimerId=null;
+const meetingState={phase:"discussion",end:0,selected:null,chat:[]};
+function addChat(name,text,kind=""){
+  meetingState.chat.push({name,text,kind});
+  const log=$("chatLog");
+  if(!log)return;
+  const line=document.createElement("div");line.className="chatLine";
+  line.innerHTML=`<span class="chatName ${kind}">${name}:</span> ${escapeHtml(text)}`;
+  log.appendChild(line);log.scrollTop=log.scrollHeight;
+}
+function escapeHtml(x){return String(x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+function openMeeting(reason){emergencyMeeting(reason)}
+function emergencyMeeting(reason){
+  if((!game.started&&!game.dead)||game.meeting||game.event)return;
+  game.meeting=true;meetingState.phase="discussion";meetingState.end=Date.now()+35000;meetingState.chat=[];
+  $("overlay").style.display="flex";$("rolePanel").classList.add("hidden");
+  $("taskPanel").classList.remove("open");$("eventPanel").classList.add("hidden");$("meetingPanel").classList.remove("hidden");
+  $("meetingPhase").textContent="DISCUSSION";$("voteArea").classList.add("hidden");$("chatLog").innerHTML="";
+  $("meetingReason").textContent=reason;renderEvidence();banner("🚨 RIOT MEETING");
+  addChat("SYSTEM","Discussion is open. Make your case. Voting starts when the timer hits zero.","chatSystem");
+  botDiscussion();
+  clearInterval(meetingTimerId);meetingTimerId=setInterval(meetingTick,250);
+}
+function meetingTick(){
+  if(!game.meeting)return;
+  const left=Math.max(0,Math.ceil((meetingState.end-Date.now())/1000));
+  $("meetingTimer").textContent=meetingState.phase==="discussion"?`DISCUSSION ${left}s`:`VOTING ${left}s`;
+  if(left<=0 && meetingState.phase==="discussion")startVoting();
+  if(left<=0 && meetingState.phase==="voting")finishVote();
+}
+function startVoting(){
+  meetingState.phase="voting";meetingState.end=Date.now()+15000;$("meetingPhase").textContent="VOTING";
+  $("chatComposer").classList.add("hidden");$("voteArea").classList.remove("hidden");renderVotes();addChat("SYSTEM","DISCUSSION CLOSED. Votes are now private.","chatSystem");
+}
+function renderEvidence(){
+  const recent=game.evidence.slice(-3).map(e=>`${e.subject}: ${e.detail}`).join(" | ")||"No confirmed evidence.";
+  $("evidence").innerHTML=[
+    ["YOUR ROLE",game.role==="ROGUE"?"Keep your story consistent.":"Compare player behavior."],
+    ["TASKS",`${game.completed.size} / 7 completed.`],
+    ["RECENT EVENTS",recent],
+    ["LOCATION",roomAt(player.x,player.y)],
+    ["SUSPICION",`${game.suspicion}%`],
+    ["PLAYERS","Up to 10 operatives."]
+  ].map(x=>`<div><b>${x[0]}</b><span>${x[1]}</span></div>`).join("");
+}
+function renderVotes(){
+  $("votes").innerHTML="";
+  ["YOU",...bots.map(b=>b.name)].forEach(name=>{
+    const b=document.createElement("button");b.className="vote";b.textContent=name;
+    if(name==="YOU"){b.disabled=true;b.classList.add("dead")}
+    b.onclick=()=>resolveVote(name);$("votes").appendChild(b);
+  });
+}
+function resolveVote(name){
+  if(meetingState.phase!=="voting"||name==="YOU")return;
+  meetingState.selected=name;$("meetingStatus").textContent=`VOTE LOCKED: ${name}`;
+  document.querySelectorAll("#votes .vote").forEach(x=>x.disabled=true);
+  if(window.__MP_SEND)window.__MP_SEND({type:"vote",name});
+  setTimeout(()=>finishVote(),500);
+}
+function finishVote(){
+  if(!game.meeting)return;clearInterval(meetingTimerId);
+  const name=meetingState.selected||"SKIP";
+  game.meeting=false;$("meetingPanel").classList.add("hidden");hideOverlay();
+  if(name==="SKIP"){banner("VOTE SKIPPED");return}
+  const role=(name==="VEX"||name==="RIFT")&&Math.random()<.5?"ROGUE":"CREW";
+  banner(name+" WAS EJECTED // "+role);
+  if(role==="ROGUE"){game.started=false;setTimeout(()=>alert("ROGUE IDENTIFIED — CREW WINS"),500)}
+  else if(game.role==="ROGUE"){setTimeout(()=>alert("CREW EJECTED — ROGUE WINS"),500)}
+}
+function botDiscussion(){
+  const lines=[
+    ["NOVA","I was in Control doing System Repair."],
+    ["BYTE","I saw someone moving through Central. I couldn't confirm who."],
+    ["RIFT","Why are we rushing this? Where exactly did the incident happen?"],
+    ["KODA","I finished my task in Lab. Check the task progress."],
+    ["VEX","I think the person who reported this should explain first."],
+    ["MISO","I don't trust that story. Something feels off."],
+    ["ZERO","I was near Security. Nobody came through my route."],
+    ["ECHO","We need evidence before ejecting anyone."],
+    ["ONYX","Watch who changes their story."],
+  ];
+  let i=0;
+  function next(){
+    if(!game.meeting||meetingState.phase!=="discussion"||i>=lines.length)return;
+    const [n,t]=lines[i++];setTimeout(()=>{if(game.meeting&&meetingState.phase==="discussion"){addChat(n,t);next()}},2500+Math.random()*1800);
+  }
+  next();
+}
+$("sendChat").onclick=sendChatMessage;
+$("chatInput").addEventListener("keydown",e=>{if(e.key==="Enter")sendChatMessage()});
+function sendChatMessage(){
+  if(!game.meeting||meetingState.phase!=="discussion")return;
+  const input=$("chatInput"),text=input.value.trim();if(!text)return;input.value="";
+  const name=(window.__MP_NAME||"YOU");addChat(name,text,"chatMine");
+  if(window.__MP_SEND)window.__MP_SEND({type:"chat",name,text});
+}
+$("skipVote").onclick=()=>{if(meetingState.phase!=="voting")return;meetingState.selected="SKIP";finishVote()};
+$("killBtn").onclick=killNearby;
+
+/* ---------- BOTS ---------- */
+function botThink(b){
+  b.think--;
+  if(b.think>0)return;
+  b.think=35+Math.random()*90;
+  const a=Math.random()*Math.PI*2;
+  b.dx=Math.cos(a);b.dy=Math.sin(a);
+  /* Bots sometimes investigate a task or central area. */
+  if(Math.random()<.35){
+    const t=tasks[Math.floor(Math.random()*tasks.length)];
+    const dx=t.x-b.x,dy=t.y-b.y,d=Math.hypot(dx,dy)||1;
+    b.dx=dx/d;b.dy=dy/d;
+  }
+}
+function updateBots(){
+  for(const b of bots){
+    botThink(b);
+    moveBot(b,b.dx*b.speed,b.dy*b.speed);
+  }
+}
+function moveBot(b,dx,dy){
+  let nx=b.x+dx,ny=b.y;
+  if(!walls.some(w=>circleRect(nx,ny,b.size/2,w)))b.x=nx;else b.dx*=-1;
+  nx=b.x;ny=b.y+dy;
+  if(!walls.some(w=>circleRect(nx,ny,b.size/2,w)))b.y=ny;else b.dy*=-1;
+  b.x=Math.max(25,Math.min(W-25,b.x));b.y=Math.max(25,Math.min(H-25,b.y));
+}
+
+/* ---------- DRAW ---------- */
+function camera(){
+  return {x:Math.max(0,Math.min(W-viewW,player.x-viewW/2)),y:Math.max(0,Math.min(H-viewH,player.y-viewH/2))}
+}
+function draw(){
+  ctx.clearRect(0,0,viewW,viewH);
+  const cam=camera();
+  ctx.save();ctx.translate(-cam.x,-cam.y);
+  ctx.fillStyle="#07090d";ctx.fillRect(0,0,W,H);
+
+  /* floor grid */
+  ctx.strokeStyle="#10151d";ctx.lineWidth=1;
+  for(let x=0;x<=W;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<=H;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+
+  /* rooms */
+  for(const r of rooms){
+    ctx.fillStyle="#0b1017";ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.strokeStyle="#27303a";ctx.lineWidth=4;ctx.strokeRect(r.x,r.y,r.w,r.h);
+    ctx.fillStyle="#66717d";ctx.font="bold 18px monospace";ctx.fillText(r.name,r.x+18,r.y+30);
+  }
+
+  /* walls */
+  ctx.fillStyle="#353c46";
+  for(const w of walls)ctx.fillRect(w.x,w.y,w.w,w.h);
+
+  /* task stations */
+  for(const t of tasks){
+    ctx.fillStyle=game.completed.has(t.id)?"#18301f":t.color;
+    ctx.fillRect(t.x-22,t.y-22,44,44);
+    ctx.fillStyle="#050608";ctx.fillRect(t.x-14,t.y-10,28,20);
+    if(!game.completed.has(t.id)){ctx.strokeStyle="#fff";ctx.strokeRect(t.x-27,t.y-27,54,54)}
+  }
+
+  /* bots */
+  for(const b of bots){
+    const mpb=window.__MP_GET_PLAYERS?window.__MP_GET_PLAYERS().find(p=>p.name===b.name):null;
+    if(mpb && mpb.alive===false) continue;
+    ctx.fillStyle=b.color;ctx.fillRect(b.x-b.size/2,b.y-b.size/2,b.size,b.size);
+    ctx.fillStyle="#fff";ctx.font="bold 11px monospace";ctx.textAlign="center";ctx.fillText(b.name,b.x,b.y-b.size/2-7);
+  }
+
+  /* eliminated body markers */
+  const mpPlayers = window.__MP_GET_PLAYERS ? window.__MP_GET_PLAYERS() : [];
+  for(const p of mpPlayers){
+    if(p.alive===false){
+      const bx=p.x, by=p.y;
+      ctx.fillStyle="#a61b2b";ctx.fillRect(bx-15,by-8,30,16);
+      ctx.fillStyle="#edc83d";ctx.fillRect(bx-20,by+12,40,3);
+      ctx.fillStyle="#fff";ctx.font="bold 9px monospace";ctx.textAlign="center";ctx.fillText("BODY",bx,by-15);
+    }
+  }
+
+  /* player */
+  ctx.fillStyle=game.role==="ROGUE"?"#e44":"#fff";
+  ctx.fillRect(player.x-player.size/2,player.y-player.size/2,player.size,player.size);
+  ctx.fillStyle="#050608";ctx.fillRect(player.x-8,player.y-6,16,8);
+  ctx.fillStyle="#fff";ctx.font="bold 11px monospace";ctx.textAlign="center";ctx.fillText("YOU",player.x,player.y-23);
+  ctx.textAlign="left";
+
+  /* darkness during power event */
+  if(game.event?.id==="POWER"){
+    ctx.fillStyle="rgba(0,0,0,.72)";
+    ctx.fillRect(cam.x,cam.y,viewW,viewH);
+    const g=ctx.createRadialGradient(player.x,player.y,40,player.x,player.y,210);
+    g.addColorStop(0,"rgba(0,0,0,0)");
+    g.addColorStop(1,"rgba(0,0,0,.85)");
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(player.x,player.y,210,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+
+  /* CRT */
+  ctx.fillStyle="rgba(255,255,255,.025)";
+  for(let y=0;y<viewH;y+=4)ctx.fillRect(0,y,viewW,1);
+}
+function update(){
+  if(game.started&&!game.dead&&!game.meeting&&!activeTask&&!game.event){
+    let dx=0,dy=0;
+    if(keys.w||keys.arrowup)dy-=1;if(keys.s||keys.arrowdown)dy+=1;if(keys.a||keys.arrowleft)dx-=1;if(keys.d||keys.arrowright)dx+=1;
+    if(dx||dy){const l=Math.hypot(dx,dy);moveEntity(player,dx/l*player.speed,dy/l*player.speed)}
+    updateBots();
+  }
+  const t=nearestTask();
+  const kb=$("killBtn");
+  const kt=game.role==="ROGUE"&&!game.dead&&!game.meeting&&!game.event&&game.started;
+  if(kb){kb.className=kt?"killBtn ready":"killBtn";kb.textContent=game.killReady?"☠ K — ELIMINATE":`☠ COOLDOWN ${game.killCooldown}s`;}
+  $("prompt").style.display=game.started&&!game.event&&!activeTask&&t?"block":"none";
+  updateHud();
+}
+function loop(){update();draw();requestAnimationFrame(loop)}
+loop();
+
+/* Random non-rogue event pressure, after the player has had time to play. */
+setTimeout(()=>{
+  if(game.started&&!game.event&&!game.meeting&&game.role==="CREW"&&Math.random()<.6)
+    startEvent(EVENT_TYPES[Math.floor(Math.random()*EVENT_TYPES.length)],"SYSTEM");
+},25000);
+setTimeout(()=>{
+  if(game.started&&!game.event&&!game.meeting&&game.role==="ROGUE")banner("Q — SABOTAGE READY");
+},6000);
+
+})();
+</script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+/* ---------- REAL MULTIPLAYER LAYER ---------- */
+(function(){
+  const q=new URLSearchParams(location.search), room=(q.get('room')||'').toUpperCase(), host=q.get('host')==='1';
+  if(!room || typeof Peer==='undefined') return;
+  const M={active:true,host,peer:null,conn:null,id:null,started:false,players:{},inputs:{},roles:{},lastSend:0};
+  window.__MP_ID=null; window.__MP_GET_PLAYERS=()=>Object.values(M.players||{});
+  const lobby=document.getElementById('mpLobby'), mpTitle=document.getElementById('mpTitle'), mpDesc=document.getElementById('mpDesc'), mpCode=document.getElementById('mpCode'), mpCount=document.getElementById('mpCount'), mpPlayers=document.getElementById('mpPlayers'), mpStart=document.getElementById('mpStart'), mpCopy=document.getElementById('mpCopy');
+  lobby.classList.add('show'); mpCode.textContent=room; mpStart.style.display=host?'inline-block':'none';
+  function renderLobby(){const arr=Object.values(M.players);mpCount.textContent=`${arr.length} / 10 PLAYERS`;mpPlayers.innerHTML=arr.map(p=>`<div class="mp-player ${p.human?'human':''}">${p.name}${p.human?'':' [BOT]'}</div>`).join('')}
+  function send(c,m){try{if(c&&c.open)c.send(m)}catch(e){}}
+  window.__MP_NAME='YOU';window.__MP_SEND=(m)=>{if(host){hostData(M.id,m)}else if(M.conn)send(M.conn,m)};
+  function broadcast(m){Object.values(M.players).forEach(p=>{if(p.conn)send(p.conn,m)})}
+  function makeName(){return 'PLAYER-'+Math.floor(100+Math.random()*900)}
+  function makeBots(){const botNames=['NOVA','BYTE','RIFT','KODA','VEX','MISO','ZERO','ECHO','ONYX'];while(Object.keys(M.players).length<10){const i=Object.keys(M.players).filter(x=>x.startsWith('bot-')).length;const id='bot-'+i;M.players[id]={id,name:botNames[i]||('BOT-'+i),human:false,x:1180+(i%3)*180,y:720+Math.floor(i/3)*160,alive:true,input:{}}}}
+  function publicState(){return{players:Object.values(M.players).map(p=>({id:p.id,name:p.name,human:p.human,x:p.x,y:p.y,alive:p.alive})),completed:[...game.completed],event:game.event?{name:game.event.name}:null}}
+  function setRoleUI(){const title=document.getElementById('roleTitle'),desc=document.getElementById('roleDesc');title.textContent=game.role==='ROGUE'?'ROGUE — SYSTEM BREAKER':'CREW — SYSTEM OPERATIVE';title.className=game.role==='ROGUE'?'roleRogue':'roleCrew';desc.textContent=game.role==='ROGUE'?'You are the hidden saboteur. Press Q to sabotage and K near a target to eliminate them. Blend in and survive the vote.':'Complete the seven tasks, watch the other players, and find the Rogue.';}
+function start(){if(!host)return;makeBots();const ids=Object.keys(M.players);const rogue=ids[Math.floor(Math.random()*ids.length)];ids.forEach(id=>M.roles[id]=id===rogue?'ROGUE':'CREW');game.role=M.roles[M.id]||'CREW';game.dead=false;M.started=true;lobby.classList.remove('show');setRoleUI();if(typeof updateHud==='function')updateHud();Object.values(M.players).forEach(p=>{if(p.conn)send(p.conn,{type:'start',state:publicState(),role:M.roles[p.id]})});renderLobby()}
+  function hostAdd(c){if(Object.keys(M.players).length>=10){send(c,{type:'full'});return}const id=c.peer;M.players[id]={id,name:makeName(),human:true,conn:c,x:1320+Math.random()*80,y:820+Math.random()*80,alive:true,input:{}};send(c,{type:'welcome',id,players:publicState().players,started:M.started});renderLobby()}
+  function hostData(id,m){const p=M.players[id];if(!p)return;if(m.type==='input')p.input=m.input;if(m.type==='kill'&&M.started&&M.roles[id]==='ROGUE'&&!game.meeting&&!game.event){const t=M.players[m.targetId];if(t&&t.alive&&t.id!==id){t.alive=false;if(t.id===M.id){game.dead=true;banner('☠ YOU WERE ELIMINATED');}broadcast({type:'kill',targetId:t.id,targetName:t.name,x:t.x,y:t.y});addEvidence('BODY',`${t.name} was eliminated.`);setTimeout(()=>{if(game.started&&!game.meeting&&!game.event)openMeeting('BODY DISCOVERED // '+t.name);broadcast({type:'meeting',reason:'BODY DISCOVERED // '+t.name})},900)}}if(m.type==='input')p.input=m.input;if(m.type==='sabotage'&&M.started&&M.roles[id]==='ROGUE'&&!game.event){if(typeof triggerSabotage==='function')triggerSabotage();broadcast({type:'event',event:{name:game.event?.name||'SABOTAGE'}})}if(m.type==='meeting'&&M.started&&!game.event){openMeeting(m.reason||'EMERGENCY MEETING');broadcast({type:'meeting',reason:m.reason||'EMERGENCY MEETING'})}if(m.type==='chat'&&M.started&&game.meeting){addChat(m.name||'PLAYER',m.text||'');broadcast({type:'chat',name:m.name||'PLAYER',text:m.text||''})}if(m.type==='vote'&&M.started&&game.meeting){meetingState.selected=m.name;broadcast({type:'vote',name:m.name})}if(m.type==='task'&&M.started){game.completed.add(m.id);broadcast({type:'state',state:publicState()})}}
+  function guestData(m){if(m.type==='welcome'){M.id=m.id;window.__MP_NAME='PLAYER-'+m.id.slice(-3);M.started=m.started;game.role='CREW';M.players={};m.players.forEach(p=>M.players[p.id]={...p});renderLobby();mpTitle.textContent='WAITING FOR HOST';mpDesc.textContent='Share the room code with your squad. The host starts the Riot.';if(M.started)lobby.classList.remove('show')}if(m.type==='start'){game.role=m.role||'CREW';game.dead=false;M.started=true;M.players={};m.state.players.forEach(p=>M.players[p.id]={...p});lobby.classList.remove('show');setRoleUI();if(typeof updateHud==='function')updateHud()}if(m.type==='state'){M.players={};m.state.players.forEach(p=>M.players[p.id]={...p});game.completed=new Set(m.state.completed||[])}if(m.type==='kill'){if(m.targetId===M.id){game.dead=true;game.elimination={name:'YOU',x:player.x,y:player.y,time:Date.now()};banner('☠ YOU WERE ELIMINATED');}else{const t=M.players[m.targetId];if(t)t.alive=false;game.elimination={name:m.targetName,x:m.x,y:m.y,time:Date.now()};banner('☠ '+m.targetName+' ELIMINATED')}}if(m.type==='event'){banner('⚠ '+(m.event?.name||'SABOTAGE'));}if(m.type==='meeting'){emergencyMeeting(m.reason||'EMERGENCY MEETING');}if(m.type==='chat'&&game.meeting){addChat(m.name||'PLAYER',m.text||'');}if(m.type==='vote'&&game.meeting){meetingState.selected=m.name;$("meetingStatus").textContent=`VOTE: ${m.name}`}}
+  if(host){mpTitle.textContent='PRIVATE ROOM';mpDesc.textContent='Send this code to your friends. Empty seats become AI bots when you start.';mpStart.disabled=false;M.peer=new Peer(room,{debug:0});M.peer.on('open',id=>{M.id=id;window.__MP_ID=id;window.__MP_NAME='HOST';M.players[id]={id,name:'HOST',human:true,local:true,x:player.x,y:player.y,alive:true,input:{}};renderLobby()});M.peer.on('connection',c=>{c.on('open',()=>hostAdd(c));c.on('data',m=>hostData(c.peer,m));c.on('close',()=>{delete M.players[c.peer];renderLobby()})});M.peer.on('error',e=>{mpDesc.textContent='Room error: '+e.type})}else{mpTitle.textContent='JOINING ROOM';mpDesc.textContent='Connecting to '+room+'...';mpStart.disabled=true;M.peer=new Peer(undefined,{debug:0});M.peer.on('open',id=>{M.id=id;M.conn=M.peer.connect(room,{reliable:true});M.conn.on('open',()=>send(M.conn,{type:'join'}));M.conn.on('data',guestData);M.conn.on('close',()=>{mpDesc.textContent='Host disconnected.';lobby.classList.add('show')})});M.peer.on('error',e=>{mpDesc.textContent='Could not connect: '+e.type})}
+  mpStart.onclick=start;mpCopy.onclick=async()=>{try{await navigator.clipboard.writeText(room)}catch{}mpCopy.textContent='COPIED';setTimeout(()=>mpCopy.textContent='COPY CODE',1000)};
+  /* Host authoritative position sync. Guests send input; host sends positions. */
+  setInterval(()=>{if(!M.active||!M.started)return;if(host){const mep=M.players[M.id];if(mep){mep.x=player.x;mep.y=player.y}Object.values(M.players).forEach(p=>{if(p.id===M.id||!p.human)return;const i=p.input||{};let dx=(i.right?1:0)-(i.left?1:0),dy=(i.down?1:0)-(i.up?1:0);if(dx||dy){const l=Math.hypot(dx,dy);p.x+=dx/l*4.2;p.y+=dy/l*4.2}});broadcast({type:'state',state:publicState()})}else if(M.conn){const i={up:!!(keys.w||keys.arrowup),down:!!(keys.s||keys.arrowdown),left:!!(keys.a||keys.arrowleft),right:!!(keys.d||keys.arrowright)};send(M.conn,{type:'input',input:i});const mep=M.players[M.id];if(mep){player.x=mep.x;player.y=mep.y}}},70);
+  /* Guests draw remote humans + bots. */
+  const oldDraw=window.draw; if(typeof oldDraw==='function'){window.draw=function(){oldDraw();if(!M.started)return;const camX=Math.max(0,Math.min(2800-innerWidth,player.x-innerWidth/2)),camY=Math.max(0,Math.min(1800-innerHeight,player.y-innerHeight/2));ctx.save();ctx.translate(-camX,-camY);Object.values(M.players).forEach(p=>{if(p.id===M.id||!p.alive)return;ctx.fillStyle=p.human?'#55a7ff':'#aaa';ctx.fillRect(p.x-13,p.y-13,26,26);ctx.fillStyle='#fff';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText(p.name,p.x,p.y-20)});ctx.restore()}}
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>PIXEL RIOT — ALONE</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+
+            background:
+                radial-gradient(circle at center, #151515 0%, #050505 70%);
+
+            color: white;
+
+            font-family: "Courier New", monospace;
+
+            padding: 40px 25px;
+
+            overflow-x: hidden;
+        }
+
+        /* CRT EFFECT */
+
+        body::before {
+            content: "";
+
+            position: fixed;
+            inset: 0;
+
+            pointer-events: none;
+
+            background: repeating-linear-gradient(to bottom,
+                    rgba(255, 255, 255, 0.02) 0px,
+                    rgba(255, 255, 255, 0.02) 1px,
+                    transparent 1px,
+                    transparent 4px);
+
+            z-index: 20;
+        }
+
+        /* HEADER */
+
+        .header {
+            max-width: 1100px;
+
+            margin: auto;
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            margin-bottom: 60px;
+        }
+
+        .logo {
+            font-family: Impact, "Arial Black", sans-serif;
+
+            font-size: 32px;
+
+            letter-spacing: -1px;
+
+            text-shadow:
+                3px 3px 0 #555,
+                6px 6px 0 #111;
+        }
+
+        .back {
+            color: #777;
+
+            text-decoration: none;
+
+            font-size: 12px;
+
+            letter-spacing: 2px;
+
+            border: 2px solid #333;
+
+            padding: 10px 15px;
+
+            transition: 0.15s;
+        }
+
+        .back:hover {
+            color: white;
+
+            border-color: white;
+        }
+
+        /* TITLE */
+
+        .title {
+            max-width: 1100px;
+
+            margin: auto;
+
+            margin-bottom: 35px;
+        }
+
+        .title small {
+            color: #555;
+
+            letter-spacing: 4px;
+
+            font-size: 11px;
+        }
+
+        .title h1 {
+            font-family: Impact, "Arial Black", sans-serif;
+
+            font-size: clamp(45px, 8vw, 80px);
+
+            letter-spacing: -2px;
+
+            margin-top: 8px;
+        }
+
+        /* GAME GRID */
+
+        .games {
+            max-width: 1100px;
+
+            margin: auto;
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(auto-fit, minmax(260px, 1fr));
+
+            gap: 25px;
+        }
+
+        /* GAME CARD */
+
+        .game-card {
+            min-height: 260px;
+
+            background: #0d0d0d;
+
+            border: 3px solid #333;
+
+            padding: 25px;
+
+            position: relative;
+
+            display: flex;
+
+            flex-direction: column;
+
+            justify-content: space-between;
+
+            transition: 0.15s;
+
+            cursor: pointer;
+        }
+
+        .game-card:hover {
+            transform: translateY(-6px);
+
+            border-color: white;
+
+            box-shadow:
+                8px 8px 0 white,
+                13px 13px 0 #111;
+        }
+
+        .game-icon {
+            font-size: 65px;
+
+            filter: grayscale(1);
+        }
+
+        .game-name {
+            font-family: Impact, "Arial Black", sans-serif;
+
+            font-size: 32px;
+
+            letter-spacing: 1px;
+        }
+
+        .game-description {
+            color: #666;
+
+            font-size: 11px;
+
+            letter-spacing: 1px;
+
+            margin-top: 7px;
+        }
+
+        .play {
+            margin-top: 20px;
+
+            width: fit-content;
+
+            background: white;
+
+            color: black;
+
+            border: none;
+
+            padding: 11px 18px;
+
+            font-family: "Courier New", monospace;
+
+            font-weight: bold;
+
+            letter-spacing: 2px;
+
+            cursor: pointer;
+
+            transition: 0.1s;
+        }
+
+        .play:hover {
+            background: #ccc;
+        }
+
+        .play:active {
+            transform: translate(3px, 3px);
+        }
+
+        /* COMING SOON CARD */
+
+        .locked {
+            opacity: 0.35;
+
+            cursor: default;
+        }
+
+        .locked:hover {
+            transform: none;
+
+            border-color: #333;
+
+            box-shadow: none;
+        }
+
+        .locked .play {
+            background: #222;
+
+            color: #666;
+
+            cursor: default;
+        }
+
+        /* FOOTER */
+
+        .footer {
+            text-align: center;
+
+            color: #333;
+
+            font-size: 10px;
+
+            letter-spacing: 3px;
+
+            margin-top: 70px;
+        }
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <header class="header">
+
+        <div class="logo">
+            PIXEL RIOT
+        </div>
+
+        <a href="index.html" class="back">
+            ← BACK
+        </a>
+
+    </header>
+
+
+    <section class="title">
+
+        <small>GAME MODE</small>
+
+        <h1>ALONE</h1>
+
+    </section>
+
+
+    <main class="games">
+
+
+        <!-- SNAKE -->
+
+        <div class="game-card" onclick="location.href='snake.html'">
+
+            <div class="game-icon">
+                🐍
+            </div>
+
+            <div>
+
+                <div class="game-name">
+                    SNAKE
+                </div>
+
+                <div class="game-description">
+                    CLASSIC ARCADE. DON'T HIT YOURSELF.
+                </div>
+
+                <button class="play" onclick="event.stopPropagation(); location.href='snake.html'">
+                    PLAY →
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- FLAPPY -->
+        <div class="game-card" onclick="location.href='flappy.html'">
+
+            <div class="game-icon">🐤</div>
+
+            <h2>FLAPPY</h2>
+
+            <p>DON'T HIT THE PIPES.</p>
+
+            <button class="play" onclick="event.stopPropagation(); location.href='flappy.html'">
+                PLAY →
+            </button>
+
+        </div>
+        <!-- DODGE -->
+        <div class="game-card" onclick="location.href='dodge.html'">
+            <div class="game-icon">💥</div>
+            <h2>DODGE</h2>
+            <p>SURVIVE THE RIOT.</p>
+
+            <button class="play" onclick="event.stopPropagation(); location.href='dodge.html'">
+                PLAY →
+            </button>
+        </div>
+        <!-- BREAKOUT -->
+        <div class="game-card" onclick="location.href='breakout.html'">
+            <div class="game-icon">🧱</div>
+            <h2>BREAKOUT</h2>
+            <p>BREAK. BOUNCE. SURVIVE.</p>
+
+            <button class="play" onclick="event.stopPropagation(); location.href='breakout.html'">
+                PLAY →
+            </button>
+        </div>
+        <!-- SPACE RAID -->
+        <div class="game-card" onclick="location.href='space-raid.html'">
+            <div class="game-icon">🚀</div>
+            <h2>SPACE RAID</h2>
+            <p>SURVIVE THE VOID.</p>
+
+            <button class="play" onclick="event.stopPropagation(); location.href='space-raid.html'">
+                PLAY →
+            </button>
+        </div>
+        <!-- PIXEL RACER -->
+        <div class="game-card" onclick="location.href='pixel-racer.html'">
+            <div class="game-icon">🏎️</div>
+            <h2>PIXEL RACER</h2>
+            <p>DODGE. SPEED. SURVIVE.</p>
+
+            <button class="play" onclick="event.stopPropagation(); location.href='pixel-racer.html'">
+                PLAY →
+            </button>
+        </div>
+        <!-- PIXEL FIGHTER -->
+        <div class="game-card" onclick="location.href='pixel-fighter.html'">
+            <div class="game-icon">🥊</div>
+            <h2>PIXEL FIGHTER</h2>
+            <p>PUNCH. KICK. DOMINATE.</p>
+
+            <button class="play" onclick="event.stopPropagation(); location.href='pixel-fighter.html'">
+                PLAY →
+            </button>
+        </div>
+
+
+</body>
+
+</html>

@@ -1,366 +1,358 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>PIXEL RIOT</title>
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            min-height: 100vh;
-            background:
-                radial-gradient(circle at center, #151515 0%, #050505 65%);
-            color: #fff;
-            font-family: "Courier New", monospace;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        /* Subtle CRT scanlines */
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            background: repeating-linear-gradient(to bottom,
-                    rgba(255, 255, 255, 0.025) 0px,
-                    rgba(255, 255, 255, 0.025) 1px,
-                    transparent 1px,
-                    transparent 4px);
-            z-index: 10;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1000px;
-            padding: 40px 25px;
-            text-align: center;
-        }
-
-        /* LOGO */
-
-        .logo {
-            font-family: Impact, "Arial Black", sans-serif;
-            font-size: clamp(55px, 10vw, 110px);
-            letter-spacing: -5px;
-            line-height: 0.9;
-            text-transform: uppercase;
-
-            color: #ffffff;
-
-            text-shadow:
-                5px 5px 0 #777,
-                10px 10px 0 #222,
-                0 0 25px rgba(255, 255, 255, 0.15);
-
-            margin-bottom: 22px;
-        }
-
-        .tagline {
-            color: #666;
-            font-size: 13px;
-            letter-spacing: 5px;
-            text-transform: uppercase;
-            margin-bottom: 65px;
-        }
-
-        .question {
-            font-size: 17px;
-            font-weight: bold;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            margin-bottom: 25px;
-            color: #aaa;
-        }
-
-        /* BUTTON AREA */
-
-        .options {
-            display: flex;
-            justify-content: center;
-            gap: 28px;
-            flex-wrap: wrap;
-        }
-
-        /*
-            RETRO ARCADE BUTTON
-        */
-
-        .option {
-            width: 285px;
-            min-height: 180px;
-
-            position: relative;
-
-            background: #0d0d0d;
-            color: white;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-            cursor: pointer;
+<title>PIXEL RIOT</title>
 
-            padding: 32px 20px;
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
-            border: 4px solid #ffffff;
+body {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at center, #202020 0%, #090909 50%, #000 100%);
+    color: white;
+    font-family: "Courier New", monospace;
 
-            /* Pixel-style shadow */
-            box-shadow:
-                7px 7px 0 #ffffff,
-                12px 12px 0 #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-            transition:
-                transform 0.12s ease,
-                box-shadow 0.12s ease,
-                background 0.12s ease;
-        }
+    overflow: hidden;
+}
 
-        /* Pixel corners */
+/* CRT SCANLINES */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
 
-        .option::before,
-        .option::after {
-            content: "";
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background: #0d0d0d;
-        }
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0.025) 0px,
+        rgba(255,255,255,0.025) 1px,
+        transparent 1px,
+        transparent 4px
+    );
 
-        .option::before {
-            top: -4px;
-            left: -4px;
-        }
+    pointer-events: none;
+    z-index: 20;
+}
 
-        .option::after {
-            bottom: -4px;
-            right: -4px;
-        }
+/* MAIN */
+.screen {
+    width: min(1100px, 92%);
+    text-align: center;
+    position: relative;
+    z-index: 2;
+}
 
-        /* Scanline inside buttons */
+/* LOGO */
+.logo {
+    font-size: clamp(3.2rem, 9vw, 7.5rem);
+    font-weight: 900;
 
-        .option {
-            background-image: repeating-linear-gradient(0deg,
-                    transparent,
-                    transparent 5px,
-                    rgba(255, 255, 255, 0.025) 5px,
-                    rgba(255, 255, 255, 0.025) 6px);
-        }
+    letter-spacing: -6px;
+    line-height: 0.9;
 
-        /* HOVER */
+    color: white;
 
-        .option:hover {
-            transform: translate(-4px, -4px);
+    text-shadow:
+        5px 5px 0 #ff1744,
+        10px 10px 0 #00e5ff;
 
-            background-color: #171717;
+    animation: glitch 3s infinite;
+}
 
-            box-shadow:
-                11px 11px 0 #ffffff,
-                17px 17px 0 #111,
-                0 0 30px rgba(255, 255, 255, 0.12);
-        }
+.tagline {
+    margin-top: 20px;
 
-        /* CLICK */
+    color: #999;
 
-        .option:active {
-            transform: translate(5px, 5px);
+    font-size: clamp(0.75rem, 2vw, 1.1rem);
 
-            box-shadow:
-                2px 2px 0 #ffffff,
-                4px 4px 0 #111;
-        }
+    letter-spacing: 5px;
+    text-transform: uppercase;
+}
 
-        .icon {
-            font-size: 48px;
-            margin-bottom: 18px;
+.question {
+    margin-top: 65px;
+    margin-bottom: 30px;
 
-            filter:
-                grayscale(1) contrast(1.5);
+    font-size: clamp(1rem, 2.5vw, 1.4rem);
 
-            transition: transform 0.15s ease;
-        }
+    letter-spacing: 4px;
+}
 
-        .option:hover .icon {
-            transform: scale(1.12);
-        }
+/* MODE GRID */
+.modes {
+    display: grid;
 
-        .option-title {
-            font-family: Impact, "Arial Black", sans-serif;
-            font-size: 24px;
-            letter-spacing: 2px;
-        }
+    grid-template-columns: repeat(2, minmax(250px, 1fr));
 
-        .option-subtitle {
-            margin-top: 10px;
+    gap: 30px;
 
-            color: #666;
+    max-width: 850px;
 
-            font-size: 11px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
+    margin: auto;
+}
 
-        /* Tiny arcade indicator */
+/* MODE CARD */
+.mode {
+    position: relative;
 
-        .option-title::before {
-            content: "> ";
-            color: #777;
-        }
+    min-height: 270px;
 
-        /* COMING SOON */
+    padding: 35px 25px;
 
-        .coming {
-            display: none;
-            margin-top: 35px;
+    background: #111;
 
-            color: #777;
+    border: 4px solid white;
 
-            font-size: 12px;
-            letter-spacing: 3px;
+    cursor: pointer;
 
-            text-transform: uppercase;
+    user-select: none;
 
-            animation: blink 1s infinite;
-        }
+    transition:
+        transform 0.15s ease,
+        background 0.15s ease,
+        box-shadow 0.15s ease;
+}
 
-        @keyframes blink {
-            50% {
-                opacity: 0.35;
-            }
-        }
+/* INNER BORDER */
+.mode::before {
+    content: "";
 
-        /* FOOTER */
+    position: absolute;
 
-        .footer {
-            position: fixed;
-            bottom: 18px;
-            left: 0;
-            width: 100%;
+    inset: 7px;
 
-            text-align: center;
+    border: 2px solid #444;
 
-            color: #333;
+    pointer-events: none;
+}
 
-            font-size: 10px;
-            letter-spacing: 3px;
-        }
+/* HOVER */
+.mode:hover {
+    transform: translate(-6px, -6px);
 
-        /* MOBILE */
+    background: #181818;
 
-        @media (max-width: 650px) {
+    box-shadow:
+        8px 8px 0 #ff1744,
+        14px 14px 0 #00e5ff;
+}
 
-            body {
-                overflow-y: auto;
-            }
+/* CLICK */
+.mode:active {
+    transform: translate(3px, 3px);
 
-            .container {
-                padding: 35px 20px 70px;
-            }
+    box-shadow: none;
+}
 
-            .logo {
-                letter-spacing: -3px;
-            }
+/* ICON */
+.icon {
+    font-size: 4rem;
 
-            .tagline {
-                margin-bottom: 45px;
-            }
+    margin-bottom: 20px;
 
-            .options {
-                gap: 25px;
-            }
+    filter: grayscale(1);
+}
 
-            .option {
-                width: 100%;
-                max-width: 320px;
-            }
-        }
-    </style>
+/* TITLE */
+.mode h2 {
+    font-size: clamp(1.5rem, 4vw, 2.4rem);
+
+    letter-spacing: 3px;
+
+    margin-bottom: 12px;
+}
+
+/* DESCRIPTION */
+.mode p {
+    color: #999;
+
+    font-size: 0.85rem;
+
+    line-height: 1.6;
+
+    letter-spacing: 1px;
+}
+
+/* ARROW */
+.arrow {
+    margin-top: 22px;
+
+    font-size: 1rem;
+
+    letter-spacing: 3px;
+
+    color: white;
+}
+
+/* ALONE HOVER */
+.alone:hover {
+    border-color: #00e5ff;
+}
+
+/* SQUAD HOVER */
+.squad:hover {
+    border-color: #ff1744;
+}
+
+/* FOOTER */
+.footer {
+    margin-top: 55px;
+
+    color: #555;
+
+    font-size: 0.7rem;
+
+    letter-spacing: 3px;
+}
+
+/* GLITCH */
+@keyframes glitch {
+
+    0%,
+    90%,
+    100% {
+        transform: translate(0);
+    }
+
+    92% {
+        transform: translate(-3px, 2px);
+    }
+
+    94% {
+        transform: translate(3px, -2px);
+    }
+
+    96% {
+        transform: translate(-2px, 1px);
+    }
+}
+
+/* MOBILE */
+@media (max-width: 700px) {
+
+    body {
+        overflow-y: auto;
+        padding: 35px 0;
+    }
+
+    .modes {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .mode {
+        min-height: 220px;
+    }
+
+    .question {
+        margin-top: 45px;
+    }
+
+    .footer {
+        margin-top: 35px;
+    }
+}
+</style>
 </head>
 
 <body>
 
-    <main class="container">
+<div class="screen">
 
-        <div class="logo">
-            PIXEL RIOT
-        </div>
+    <!-- LOGO -->
+    <div class="logo">
+        PIXEL RIOT
+    </div>
 
-        <div class="tagline">
-            Enter the chaos.
-        </div>
-
-        <div class="question">
-            Who's playing?
-        </div>
-
-        <div class="options">
-
-            <div class="option" onclick="comingSoon('ALONE')">
-
-                <div class="icon">🎮</div>
-
-                <div class="option-title">
-                    ALONE
-                </div>
-
-                <div class="option-subtitle">
-                    Solo arcade games
-                </div>
-
-            </div>
-
-
-            <div class="option" onclick="comingSoon('SQUAD')">
-
-                <div class="icon">👥</div>
-
-                <div class="option-title">
-                    GOT A SQUAD?
-                </div>
-
-                <div class="option-subtitle">
-                    Play with your crew
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="coming" id="coming">
-            <span id="comingText"></span>
-        </div>
-
-    </main>
-
-    <div class="footer">
-        PIXEL RIOT © 2026
+    <div class="tagline">
+        Enter the chaos.
     </div>
 
 
-    <script>
+    <!-- QUESTION -->
+    <div class="question">
+        WHO'S PLAYING?
+    </div>
 
-        function comingSoon(type) {
 
-            const message =
-                document.getElementById("coming");
+    <!-- GAME MODES -->
+    <div class="modes">
 
-            const text =
-                document.getElementById("comingText");
+        <!-- ================= ALONE ================= -->
 
-            text.textContent =
-                type + " MODE — COMING SOON...";
+        <div
+            class="mode alone"
+            onclick="location.href='alone.html'"
+        >
 
-            message.style.display = "block";
-        }
+            <div class="icon">
+                ◈
+            </div>
 
-    </script>
+            <h2>
+                ALONE
+            </h2>
+
+            <p>
+                SOLO GAMES.<br>
+                NO FRIENDS. NO MERCY.
+            </p>
+
+            <div class="arrow">
+                ENTER →
+            </div>
+
+        </div>
+
+
+        <!-- ================= SQUAD ================= -->
+
+        <div
+            class="mode squad"
+            onclick="location.href='squad.html'"
+        >
+
+            <div class="icon">
+                ◆◆◆
+            </div>
+
+            <h2>
+                SQUAD
+            </h2>
+
+            <p>
+                GRAB YOUR FRIENDS.<br>
+                TRUST NOBODY.
+            </p>
+
+            <div class="arrow">
+                CREATE / JOIN →
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- FOOTER -->
+
+    <div class="footer">
+        PIXEL RIOT // 2026
+    </div>
+
+</div>
 
 </body>
-
 </html>
